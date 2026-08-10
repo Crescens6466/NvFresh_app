@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <radialGradient id="bg1" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#FDEDE9"/>
+      <stop offset="100%" stop-color="#FBD9CF"/>
+    </radialGradient>
+    <linearGradient id="meat1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F3A69A"/>
+      <stop offset="100%" stop-color="#E07C6C"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg1)"/>
+  <ellipse cx="200" cy="300" rx="130" ry="18" fill="#D9887A" opacity="0.25"/>
+
+  <!-- cutting board -->
+  <ellipse cx="200" cy="230" rx="150" ry="95" fill="#E4B588"/>
+  <ellipse cx="200" cy="225" rx="150" ry="95" fill="#EFC79E"/>
+
+  <!-- scattered chicken curry-cut pieces -->
+  <g stroke="#B85C4C" stroke-width="2.5" stroke-linejoin="round">
+    <path d="M130 190 Q110 165 140 155 Q170 145 185 168 Q195 190 170 205 Q145 215 130 190 Z" fill="url(#meat1)"/>
+    <path d="M225 165 Q210 140 245 133 Q278 130 285 158 Q290 182 260 190 Q232 195 225 165 Z" fill="url(#meat1)"/>
+    <path d="M155 235 Q135 215 162 200 Q192 190 205 215 Q212 238 185 250 Q160 258 155 235 Z" fill="url(#meat1)"/>
+    <path d="M245 225 Q228 200 258 192 Q290 187 298 212 Q303 235 275 245 Q250 250 245 225 Z" fill="url(#meat1)"/>
+    <path d="M195 270 Q178 250 205 240 Q233 233 244 255 Q250 275 224 285 Q200 290 195 270 Z" fill="url(#meat1)"/>
+  </g>
+  <g fill="#fff" opacity="0.35">
+    <ellipse cx="155" cy="175" rx="10" ry="5"/>
+    <ellipse cx="250" cy="155" rx="11" ry="5"/>
+    <ellipse cx="178" cy="220" rx="9" ry="4"/>
+    <ellipse cx="270" cy="212" rx="10" ry="4"/>
+    <ellipse cx="215" cy="258" rx="9" ry="4"/>
+  </g>
+</svg>

@@ -1,0 +1,18 @@
+.admin-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.admin-content {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  padding: 28px 32px 60px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .admin-content {
+    margin-left: 76px;
+    padding: 20px 16px 60px;
+  }
+}

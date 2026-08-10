@@ -1,0 +1,82 @@
+.static-page {
+  padding: 18px 16px 40px;
+}
+
+.static-page-back {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.static-page-back .pd-back {
+  position: static;
+  box-shadow: var(--shadow-sm);
+}
+
+.static-page h2 {
+  font-size: 1.2rem;
+}
+
+.static-page section {
+  margin-top: 18px;
+}
+
+.static-page h4 {
+  font-size: 0.92rem;
+  margin-bottom: 6px;
+  color: var(--primary);
+}
+
+.static-page p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.static-page .contact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.static-page .contact-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.static-page .contact-item svg {
+  font-size: 1.3rem;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.static-page .contact-item h5 {
+  font-size: 0.82rem;
+  font-family: var(--font-body);
+  margin: 0 0 2px;
+}
+
+.static-page .contact-item p {
+  font-size: 0.78rem;
+}
+
+.contact-whatsapp-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 16px;
+  background: #25D366;
+  box-shadow: 0 8px 20px rgba(37, 211, 102, 0.28);
+}
+
+.contact-whatsapp-btn svg {
+  font-size: 1.2rem;
+}

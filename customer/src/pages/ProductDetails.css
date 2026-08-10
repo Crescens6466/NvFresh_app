@@ -1,0 +1,207 @@
+.pd {
+  padding-bottom: 90px;
+}
+
+.pd-image-wrap {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(135deg, #FBEAE5, #FDF3EF);
+}
+
+.pd-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pd-back {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  box-shadow: var(--shadow-sm);
+  z-index: 2;
+}
+
+.pd-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.pd-body {
+  padding: 18px 16px;
+}
+
+.pd-name {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.pd-price {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--primary);
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.pd-price span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.pd-desc {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.pd-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.pd-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pd-field label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.pd-field select {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-weight: 600;
+}
+
+.pd-qty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  background: var(--card);
+}
+
+.pd-qty button {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+}
+
+.pd-qty span {
+  font-weight: 700;
+}
+
+.pd-benefits {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.pd-benefit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.76rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.pd-benefit svg {
+  color: var(--secondary);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.pd-info-card {
+  margin-top: 14px;
+  padding: 14px;
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.pd-info-card h4 {
+  font-size: 0.85rem;
+  margin-bottom: 5px;
+}
+
+.pd-info-card p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.pd-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 16px 12px;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  z-index: 60;
+}
+
+.pd-action-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.pd-action-total span {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.pd-action-total strong {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--primary);
+}
+
+.pd-action-buttons {
+  display: flex;
+  gap: 10px;
+}

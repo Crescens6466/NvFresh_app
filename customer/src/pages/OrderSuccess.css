@@ -1,0 +1,38 @@
+.order-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 100px 28px;
+  gap: 14px;
+}
+
+.order-success-icon {
+  font-size: 4rem;
+  color: var(--success);
+  animation: pop 0.4s ease;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.order-success h2 {
+  font-size: 1.3rem;
+}
+
+.order-success p {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.order-success button {
+  margin-top: 10px;
+}

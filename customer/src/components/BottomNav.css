@@ -1,0 +1,88 @@
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: var(--nav-height);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.06);
+  z-index: 60;
+}
+
+.bottom-nav-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--text-muted);
+  position: relative;
+  flex: 1;
+  height: 100%;
+}
+
+.bottom-nav-icon-wrap {
+  font-size: 1.35rem;
+  display: flex;
+  position: relative;
+  color: inherit;
+  transition: transform 0.2s ease;
+}
+
+.bottom-nav-link:active .bottom-nav-icon-wrap {
+  transform: scale(0.85);
+}
+
+.bottom-nav-dot {
+  position: absolute;
+  top: -5px;
+  right: -8px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 800;
+  min-width: 15px;
+  height: 15px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom-nav-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.bottom-nav-label.is-active {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.bottom-nav-indicator {
+  position: absolute;
+  top: 4px;
+  width: 22px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--gradient-primary);
+  animation: navIndicator 0.25s ease;
+}
+
+@keyframes navIndicator {
+  from {
+    opacity: 0;
+    transform: scaleX(0.3);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}

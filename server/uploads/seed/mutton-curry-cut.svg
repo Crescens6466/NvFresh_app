@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <radialGradient id="bg3" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#FBEAEA"/>
+      <stop offset="100%" stop-color="#F3C9C4"/>
+    </radialGradient>
+    <linearGradient id="meat3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#C1554A"/>
+      <stop offset="100%" stop-color="#8D2E27"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg3)"/>
+  <ellipse cx="200" cy="300" rx="130" ry="18" fill="#7A342B" opacity="0.22"/>
+
+  <ellipse cx="200" cy="230" rx="150" ry="95" fill="#E4B588"/>
+  <ellipse cx="200" cy="225" rx="150" ry="95" fill="#EFC79E"/>
+
+  <!-- mutton chunks with bone -->
+  <g stroke="#6E241D" stroke-width="2.5" stroke-linejoin="round">
+    <path d="M135 210 Q118 185 150 175 Q182 168 192 195 Q198 218 168 228 Q142 234 135 210 Z" fill="url(#meat3)"/>
+    <path d="M230 175 Q216 150 250 143 Q283 140 290 168 Q294 192 264 200 Q236 204 230 175 Z" fill="url(#meat3)"/>
+    <path d="M220 240 Q204 215 236 205 Q268 198 278 225 Q284 248 254 258 Q226 263 220 240 Z" fill="url(#meat3)"/>
+  </g>
+
+  <!-- visible bone cross-sections -->
+  <g fill="#FBF3E8" stroke="#D9C7A8" stroke-width="1.5">
+    <circle cx="163" cy="200" r="10"/>
+    <circle cx="255" cy="168" r="9"/>
+    <circle cx="248" cy="232" r="9"/>
+  </g>
+  <g fill="#F1DFC0">
+    <circle cx="163" cy="200" r="4"/>
+    <circle cx="255" cy="168" r="3.5"/>
+    <circle cx="248" cy="232" r="3.5"/>
+  </g>
+</svg>

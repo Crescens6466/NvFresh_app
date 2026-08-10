@@ -1,0 +1,151 @@
+.payment {
+  padding: 16px 16px 40px;
+}
+
+.payment-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.payment-header .pd-back {
+  position: static;
+  box-shadow: var(--shadow-sm);
+}
+
+.payment-header h2 {
+  font-size: 1.1rem;
+}
+
+.payment-notice {
+  background: #FFF3CD;
+  color: #8A5A00;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.payment-amount-card {
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+}
+
+.payment-amount-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 6px 0;
+  color: var(--text-muted);
+}
+
+.payment-amount-highlight {
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 1rem;
+  border-top: 1px dashed var(--border);
+  margin-top: 4px;
+  padding-top: 10px;
+}
+
+.payment-qr-card {
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.payment-qr-box {
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 12px;
+  background: var(--bg);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  color: var(--primary);
+  overflow: hidden;
+}
+
+.payment-qr-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: calc(var(--radius-md) - 4px);
+}
+
+.payment-qr-box.has-image {
+  border-style: solid;
+  border-color: var(--border);
+}
+
+.payment-qr-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.payment-upi {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.payment-phone {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.payment-form {
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 18px 16px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.payment-form h4 {
+  font-size: 0.95rem;
+}
+
+.payment-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.payment-form input,
+.payment-form textarea {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-weight: 500;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: normal;
+  resize: none;
+}
+
+.payment-form button {
+  margin-top: 6px;
+}

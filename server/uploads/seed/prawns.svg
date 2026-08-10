@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <radialGradient id="bg5" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#FFF3E0"/>
+      <stop offset="100%" stop-color="#FFDBAE"/>
+    </radialGradient>
+    <linearGradient id="prawnbody" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFB27A"/>
+      <stop offset="100%" stop-color="#EF7B36"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg5)"/>
+  <ellipse cx="200" cy="300" rx="120" ry="16" fill="#B85A20" opacity="0.2"/>
+
+  <!-- prawn 1 (large, back) -->
+  <g transform="translate(60,60) rotate(8)">
+    <path d="M120 90 Q60 60 70 130 Q75 180 130 205 Q170 218 190 195 Q170 175 175 150 Q178 120 150 100 Q135 90 120 90 Z"
+          fill="url(#prawnbody)" stroke="#B4551E" stroke-width="2.5" stroke-linejoin="round"/>
+    <!-- segments -->
+    <g stroke="#B4551E" stroke-width="1.8" fill="none" opacity="0.7">
+      <path d="M95 110 Q100 130 90 148"/>
+      <path d="M115 128 Q120 148 108 165"/>
+      <path d="M138 150 Q142 168 130 183"/>
+    </g>
+    <!-- tail fan -->
+    <path d="M185 190 L215 178 L210 200 L225 205 L200 220 L188 205 Z" fill="#EF7B36" stroke="#B4551E" stroke-width="2"/>
+    <!-- eye + antenna -->
+    <circle cx="68" cy="95" r="7" fill="#5A2A10"/>
+    <path d="M65 88 Q40 55 20 45" stroke="#B4551E" stroke-width="1.6" fill="none"/>
+  </g>
+
+  <!-- prawn 2 (front, smaller) -->
+  <g transform="translate(150,175) rotate(-14) scale(0.82)">
+    <path d="M120 90 Q60 60 70 130 Q75 180 130 205 Q170 218 190 195 Q170 175 175 150 Q178 120 150 100 Q135 90 120 90 Z"
+          fill="url(#prawnbody)" stroke="#B4551E" stroke-width="2.5" stroke-linejoin="round"/>
+    <g stroke="#B4551E" stroke-width="1.8" fill="none" opacity="0.7">
+      <path d="M95 110 Q100 130 90 148"/>
+      <path d="M115 128 Q120 148 108 165"/>
+      <path d="M138 150 Q142 168 130 183"/>
+    </g>
+    <path d="M185 190 L215 178 L210 200 L225 205 L200 220 L188 205 Z" fill="#EF7B36" stroke="#B4551E" stroke-width="2"/>
+    <circle cx="68" cy="95" r="7" fill="#5A2A10"/>
+    <path d="M65 88 Q40 55 20 45" stroke="#B4551E" stroke-width="1.6" fill="none"/>
+  </g>
+</svg>

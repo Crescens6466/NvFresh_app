@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <radialGradient id="bg4" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#E7F5FC"/>
+      <stop offset="100%" stop-color="#C7E7F5"/>
+    </radialGradient>
+    <linearGradient id="fishbody" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6FBEDE"/>
+      <stop offset="100%" stop-color="#2E86AE"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg4)"/>
+  <ellipse cx="200" cy="300" rx="120" ry="16" fill="#1E5E7A" opacity="0.18"/>
+
+  <!-- tail -->
+  <path d="M300 190 L350 150 L340 200 L350 250 Z" fill="url(#fishbody)" stroke="#1E5E7A" stroke-width="2.5" stroke-linejoin="round"/>
+
+  <!-- body -->
+  <ellipse cx="200" cy="200" rx="115" ry="62" fill="url(#fishbody)" stroke="#1E5E7A" stroke-width="2.5"/>
+
+  <!-- belly highlight -->
+  <ellipse cx="195" cy="222" rx="95" ry="30" fill="#CFEFFB" opacity="0.55"/>
+
+  <!-- top fin -->
+  <path d="M170 140 Q200 108 235 140 Q205 150 170 140 Z" fill="#3E9BC2" stroke="#1E5E7A" stroke-width="2"/>
+  <!-- side fin -->
+  <path d="M190 225 Q170 255 210 258 Q205 235 190 225 Z" fill="#3E9BC2" stroke="#1E5E7A" stroke-width="2"/>
+
+  <!-- scale arcs -->
+  <g stroke="#1E5E7A" stroke-width="1.6" fill="none" opacity="0.45">
+    <path d="M120 185 Q130 195 120 205"/>
+    <path d="M140 180 Q152 195 140 210"/>
+    <path d="M160 178 Q174 195 160 213"/>
+    <path d="M180 176 Q196 195 180 215"/>
+  </g>
+
+  <!-- gill line -->
+  <path d="M112 175 Q100 200 112 225" stroke="#1E5E7A" stroke-width="2.5" fill="none"/>
+
+  <!-- eye -->
+  <circle cx="98" cy="188" r="12" fill="#fff" stroke="#1E5E7A" stroke-width="2"/>
+  <circle cx="95" cy="188" r="5.5" fill="#12293A"/>
+  <circle cx="93" cy="185" r="1.8" fill="#fff"/>
+</svg>

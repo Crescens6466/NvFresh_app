@@ -1,0 +1,278 @@
+/* index.css — NvFresh global design tokens & base styles */
+
+:root {
+  /* Brand palette (from brief) */
+  --primary: #C62828;
+  --primary-dark: #8D2323;
+  --secondary: #EF5350;
+  --accent: #FFB300;
+  --bg: #FFF8F5;
+  --card: #FFFFFF;
+  --text: #2A1B18;
+  --text-muted: #7A6560;
+  --border: #F0DFD9;
+  --success: #2E7D32;
+
+  --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  --gradient-accent: linear-gradient(135deg, #FFB300 0%, #FF8A00 100%);
+
+  --shadow-sm: 0 2px 8px rgba(198, 40, 40, 0.07);
+  --shadow-md: 0 8px 24px rgba(198, 40, 40, 0.12);
+  --shadow-lg: 0 16px 40px rgba(198, 40, 40, 0.16);
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+
+  --font-display: "Baloo 2", "Trebuchet MS", sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --nav-height: 68px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  margin: 0;
+  color: var(--text);
+  line-height: 1.15;
+}
+
+p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Scrollbar (desktop preview) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--secondary);
+  border-radius: 8px;
+}
+
+/* App shell: constrain to a phone-like column on wider screens */
+.app-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--bg);
+  position: relative;
+  padding-bottom: calc(var(--nav-height) + 12px);
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.06);
+}
+
+@media (min-width: 481px) {
+  body {
+    background: #F3E7E1;
+  }
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 22px;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-outline {
+  background: #fff;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+}
+
+.btn-accent {
+  background: var(--gradient-accent);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(255, 179, 0, 0.28);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Section label / eyebrow */
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+
+/* Badge chips */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.badge-best-seller {
+  background: #FFF3CD;
+  color: #8A5A00;
+}
+
+.badge-fresh-today {
+  background: #E3F6E8;
+  color: #1B6B33;
+}
+
+.badge-limited-stock {
+  background: #FDE7E7;
+  color: var(--primary);
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 60px 24px;
+  gap: 10px;
+  color: var(--text-muted);
+}
+
+.empty-state svg {
+  font-size: 2.6rem;
+  color: var(--secondary);
+  opacity: 0.6;
+}
+
+.empty-state h3 {
+  font-size: 1.05rem;
+}
+
+/* Fade/slide-in utility for page transitions */
+.page-fade {
+  animation: pageFade 0.35s ease;
+}
+
+@keyframes pageFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Weekly delivery schedule notice — used on Home, Product Details, Cart, Payment */
+.schedule-banner {
+  background: #FFF3CD;
+  color: #8A5A00;
+  padding: 11px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.schedule-banner svg {
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+.skeleton {
+  background: linear-gradient(90deg, #F1E3DD 25%, #F8EFEA 37%, #F1E3DD 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}

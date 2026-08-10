@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <radialGradient id="bg6" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#FCEAF1"/>
+      <stop offset="100%" stop-color="#F3C6D9"/>
+    </radialGradient>
+    <linearGradient id="meat6" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D98BA0"/>
+      <stop offset="100%" stop-color="#AD4A66"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg6)"/>
+  <ellipse cx="200" cy="305" rx="120" ry="16" fill="#8A3550" opacity="0.2"/>
+
+  <!-- whole drumstick silhouette -->
+  <g stroke="#7A2E45" stroke-width="2.5" stroke-linejoin="round">
+    <path d="M195 90 Q235 95 240 140 Q245 185 220 230 Q245 245 260 275 Q270 300 245 310
+             Q220 318 205 295 Q195 270 200 240 Q160 245 145 210 Q130 175 150 140 Q165 100 195 90 Z"
+          fill="url(#meat6)"/>
+  </g>
+
+  <!-- speckled skin texture to distinguish "country" breed -->
+  <g fill="#7A2E45" opacity="0.35">
+    <circle cx="180" cy="150" r="4"/>
+    <circle cx="205" cy="135" r="3.5"/>
+    <circle cx="165" cy="180" r="3"/>
+    <circle cx="215" cy="170" r="4"/>
+    <circle cx="195" cy="195" r="3"/>
+    <circle cx="230" cy="200" r="3.5"/>
+    <circle cx="175" cy="215" r="3"/>
+    <circle cx="220" cy="230" r="3"/>
+  </g>
+
+  <!-- bone tip -->
+  <path d="M235 270 Q255 280 250 305 Q245 322 225 315 Q212 308 218 288 Q222 275 235 270 Z"
+        fill="#FBF3E8" stroke="#D9C7A8" stroke-width="1.5"/>
+
+  <!-- highlight -->
+  <ellipse cx="180" cy="140" rx="22" ry="12" fill="#fff" opacity="0.25"/>
+</svg>
