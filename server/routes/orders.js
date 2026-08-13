@@ -4,13 +4,14 @@ import Order from "../models/Order.js";
 import Customer from "../models/Customer.js";
 import Settings from "../models/Settings.js";
 import { requireAuth } from "../middleware/auth.js";
+import { requireCustomerAuth } from "../middleware/customerAuth.js";
 import { sendOrderConfirmation, sendAdminOrderAlert } from "../utils/notify.js";
 import { toClient, toClientList } from "../utils/serialize.js";
 
 const router = express.Router();
 
-// POST /api/orders — place a new order (public, from customer site)
-router.post("/", async (req, res, next) => {
+// POST /api/orders — place a new order (customer must be signed in)
+router.post("/", requireCustomerAuth, async (req, res, next) => {
   try {
     const {
       customerName,
@@ -29,6 +30,7 @@ router.post("/", async (req, res, next) => {
     }
 
     const order = await Order.create({
+      firebase_uid: req.customer.uid,
       customer_name: customerName,
       phone,
       address,
@@ -61,6 +63,17 @@ router.post("/", async (req, res, next) => {
       .catch((err) => console.error(`[notify] Could not load Settings for admin alert:`, err.message));
 
     res.status(201).json(clientOrder);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/orders/mine — the signed-in customer's own order history
+// (must come before the /:id route below so "mine" isn't parsed as an id)
+router.get("/mine", requireCustomerAuth, async (req, res, next) => {
+  try {
+    const orders = await Order.find({ firebase_uid: req.customer.uid }).sort({ created_at: -1 });
+    res.json(toClientList(orders));
   } catch (err) {
     next(err);
   }

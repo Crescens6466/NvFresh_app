@@ -95,6 +95,8 @@ Opens at `http://localhost:5174`. Log in with `admin` / `nvfresh123`.
 - Cart with quantity steppers and order summary
 - **Advance-only payment flow**: shows 25% advance due, a QR/UPI/phone placeholder, and an
   order form (name, phone, address, transaction ID)
+- **Customer login** (Firebase — phone/OTP or Google): required before checkout; "My Orders"
+  shows the signed-in customer's order history and live status
 - About, Contact, Privacy Policy, Terms pages
 - Bottom navigation: Home, Categories, Cart, Profile
 - Toast notifications, skeleton loaders, empty states, hover/tap micro-animations
@@ -117,20 +119,59 @@ All routes are prefixed with `/api`.
 |--------|----------------------------|------|--------------------------------|
 | GET    | /products                  | No   | List products (`?category=`, `?search=`) |
 | GET    | /products/:id              | No   | Get single product             |
-| POST   | /products                  | Yes  | Create product                 |
-| PUT    | /products/:id              | Yes  | Update product                 |
-| DELETE | /products/:id              | Yes  | Delete product                 |
-| POST   | /orders                    | No   | Place an order                 |
-| GET    | /orders                    | Yes  | List all orders                |
-| PUT    | /orders/:id/status         | Yes  | Update order status            |
-| GET    | /customers                 | Yes  | List customers (`?search=`)    |
+| POST   | /products                  | Admin | Create product                 |
+| PUT    | /products/:id              | Admin | Update product                 |
+| DELETE | /products/:id              | Admin | Delete product                 |
+| POST   | /orders                    | Customer | Place an order (requires customer sign-in) |
+| GET    | /orders/mine                | Customer | The signed-in customer's own order history |
+| GET    | /orders                    | Admin | List all orders                |
+| PUT    | /orders/:id/status         | Admin | Update order status            |
+| GET    | /customers                 | Admin | List customers (`?search=`)    |
 | POST   | /auth/login                | No   | Admin login → JWT              |
-| POST   | /upload                    | Yes  | Upload an image (multipart)    |
+| POST   | /upload                    | Admin | Upload an image (multipart)    |
 | GET    | /settings                  | No   | Get business/payment settings  |
-| PUT    | /settings                  | Yes  | Update settings                |
-| GET    | /dashboard/stats           | Yes  | Aggregate dashboard stats      |
+| PUT    | /settings                  | Admin | Update settings                |
+| GET    | /dashboard/stats           | Admin | Aggregate dashboard stats      |
 
-Authenticated routes expect `Authorization: Bearer <token>`.
+Admin routes expect `Authorization: Bearer <JWT from /auth/login>`. Customer routes expect
+`Authorization: Bearer <Firebase ID token>` — see Customer Login below.
+
+## Customer Login (Firebase — phone/OTP or Google)
+
+Checkout, order placement, and order history all require the customer to be signed in via
+Firebase Authentication. This is a **required** setup step — without it, customers can still
+browse and add to cart, but Login/Checkout/My Orders will show a "Sign-in isn't set up yet"
+error until it's configured.
+
+1. Go to [console.firebase.google.com](https://console.firebase.google.com) → **Add project**.
+2. **Build → Authentication → Get started → Sign-in method** → enable **Phone** and **Google**.
+   > Phone/OTP requires attaching a billing account (Firebase's "Blaze" plan) even to stay
+   > within the free quota — Google Sign-in is free with no billing account needed. You can
+   > enable just Google first and add Phone later.
+3. **Authentication → Settings → Authorized domains** → add your production domain(s), e.g.
+   `nvfresh.in` and `www.nvfresh.in` (`localhost` is included by default for local dev).
+4. **Project settings (gear icon) → General → Your apps** → register a new **Web app** → copy
+   the `firebaseConfig` values into `customer/.env`:
+   ```
+   VITE_FIREBASE_API_KEY=...
+   VITE_FIREBASE_AUTH_DOMAIN=...
+   VITE_FIREBASE_PROJECT_ID=...
+   VITE_FIREBASE_STORAGE_BUCKET=...
+   VITE_FIREBASE_MESSAGING_SENDER_ID=...
+   VITE_FIREBASE_APP_ID=...
+   ```
+5. **Project settings → Service accounts → Generate new private key** → downloads a JSON
+   file. Paste its **entire contents as a single line** into `server/.env`:
+   ```
+   FIREBASE_SERVICE_ACCOUNT={"type":"service_account","project_id":"...", ...}
+   ```
+   Never commit this file or value to git — it's a credential, same handling as
+   `MONGODB_URI`.
+6. Restart both the customer dev server and the backend (or redeploy, setting the same env
+   vars in Vercel/Render's environment variable settings).
+
+Orders placed before this was added won't have a linked customer identity, so they won't
+appear in "My Orders" — only new orders placed after sign-in was enabled do.
 
 ## WhatsApp Order Notifications (optional)
 

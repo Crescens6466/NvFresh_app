@@ -7,3 +7,7 @@ dist/
 uploads/*
 !uploads/seed/
 !uploads/.gitkeep
+
+# Firebase service account keys — credentials, never commit these
+*firebase-adminsdk*.json
+serviceAccountKey.json

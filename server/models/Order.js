@@ -13,6 +13,10 @@ const orderItemSchema = new mongoose.Schema(
 
 const orderSchema = new mongoose.Schema(
   {
+    // Links the order to the signed-in customer (Firebase uid) so they can
+    // see it in their order history. Null for orders placed before customer
+    // login existed — those just won't appear in "My Orders".
+    firebase_uid: { type: String, index: true, default: null },
     customer_name: { type: String, required: true },
     phone: { type: String, required: true },
     address: { type: String, required: true },

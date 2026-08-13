@@ -20,14 +20,21 @@ export function resolveImageUrl(path) {
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Request failed" }));
     throw new Error(err.error || "Request failed");
   }
   return res.json();
+}
+
+function authHeaders(token) {
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export const api = {
@@ -37,6 +44,11 @@ export const api = {
   },
   getProduct: (id) => request(`/products/${id}`),
   getSettings: () => request(`/settings`),
-  placeOrder: (order) =>
-    request(`/orders`, { method: "POST", body: JSON.stringify(order) }),
+  placeOrder: (order, token) =>
+    request(`/orders`, {
+      method: "POST",
+      body: JSON.stringify(order),
+      headers: authHeaders(token),
+    }),
+  getMyOrders: (token) => request(`/orders/mine`, { headers: authHeaders(token) }),
 };

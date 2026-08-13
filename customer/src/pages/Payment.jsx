@@ -11,16 +11,15 @@ export default function Payment() {
   const { items, subtotal, deliveryCharge, total, clearCart } = useCart();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { profile } = useCustomerAuth();
+  const { profile, isLoggedIn, loading: authLoading, getIdToken } = useCustomerAuth();
 
   const [settings, setSettings] = useState(null);
   // Pre-fill from a saved profile (faster checkout for returning customers) —
-  // still fully editable, and guests who never logged in just get blank
-  // fields exactly as before.
+  // still fully editable.
   const [form, setForm] = useState({
     name: profile?.name || "",
     phone: profile?.phone || "",
-    address: profile?.address || "",
+    address: "",
     transactionId: "",
   });
   const [submitting, setSubmitting] = useState(false);
@@ -28,9 +27,18 @@ export default function Payment() {
   const advance = Math.round(total * 0.25);
 
   useEffect(() => {
-    if (items.length === 0) navigate("/cart");
+    if (items.length === 0) {
+      navigate("/cart");
+      return;
+    }
+    // Checkout requires a signed-in customer — bounce to login and come
+    // straight back here once they're done.
+    if (!authLoading && !isLoggedIn) {
+      navigate("/login", { state: { from: "/payment" } });
+      return;
+    }
     api.getSettings().then(setSettings).catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -44,17 +52,21 @@ export default function Payment() {
     }
     setSubmitting(true);
     try {
-      await api.placeOrder({
-        customerName: form.name,
-        phone: form.phone,
-        address: form.address,
-        items,
-        subtotal,
-        deliveryCharge,
-        total,
-        advancePaid: advance,
-        transactionId: form.transactionId,
-      });
+      const token = await getIdToken();
+      await api.placeOrder(
+        {
+          customerName: form.name,
+          phone: form.phone,
+          address: form.address,
+          items,
+          subtotal,
+          deliveryCharge,
+          total,
+          advancePaid: advance,
+          transactionId: form.transactionId,
+        },
+        token
+      );
       clearCart();
       navigate("/order-success");
     } catch (err) {

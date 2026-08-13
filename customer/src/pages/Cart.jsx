@@ -2,12 +2,22 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { HiOutlineMinus, HiOutlinePlus, HiOutlineTrash, HiOutlineShoppingCart, HiOutlineTruck } from "react-icons/hi2";
 import { useCart } from "../context/CartContext.jsx";
+import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
 import { resolveImageUrl } from "../api.js";
 import "./Cart.css";
 
 export default function Cart() {
   const { items, updateQuantity, removeFromCart, subtotal, deliveryCharge, total } = useCart();
+  const { isLoggedIn } = useCustomerAuth();
   const navigate = useNavigate();
+
+  function handleCheckout() {
+    if (isLoggedIn) {
+      navigate("/payment");
+    } else {
+      navigate("/login", { state: { from: "/payment" } });
+    }
+  }
 
   if (items.length === 0) {
     return (
@@ -84,7 +94,7 @@ export default function Cart() {
           <p className="cart-checkout-label">Total</p>
           <p className="cart-checkout-total">₹{total}</p>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate("/payment")}>
+        <button className="btn btn-primary" onClick={handleCheckout}>
           Checkout
         </button>
       </div>

@@ -24,11 +24,15 @@ const LINKS = [
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { profile, isLoggedIn, logout } = useCustomerAuth();
+  const { profile, isLoggedIn, loading, logout } = useCustomerAuth();
   const { showToast } = useToast();
 
-  function handleLogout() {
-    logout();
+  if (loading) {
+    return <div className="skeleton" style={{ height: 300, margin: "18px 16px" }} />;
+  }
+
+  async function handleLogout() {
+    await logout();
     showToast("Signed out");
   }
 
@@ -44,8 +48,8 @@ export default function Profile() {
         </div>
         {isLoggedIn ? (
           <div>
-            <h3>{profile.name}</h3>
-            <p>{profile.phone}</p>
+            <h3>{profile.name || profile.phone || profile.email || "Signed in"}</h3>
+            <p>{profile.phone || profile.email || ""}</p>
           </div>
         ) : (
           <div>
@@ -65,10 +69,21 @@ export default function Profile() {
       </div>
 
       <div className="profile-quick">
-        <div className="profile-quick-item">
-          <HiOutlineClipboardDocumentList />
-          <span>My Orders</span>
-        </div>
+        {isLoggedIn ? (
+          <Link to="/orders" className="profile-quick-item">
+            <HiOutlineClipboardDocumentList />
+            <span>My Orders</span>
+          </Link>
+        ) : (
+          <div
+            className="profile-quick-item"
+            onClick={() => navigate("/login")}
+            role="button"
+          >
+            <HiOutlineClipboardDocumentList />
+            <span>My Orders</span>
+          </div>
+        )}
         <div className="profile-quick-item">
           <HiOutlineMapPin />
           <span>Addresses</span>

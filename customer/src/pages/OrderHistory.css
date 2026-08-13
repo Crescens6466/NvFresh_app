@@ -1,0 +1,78 @@
+.order-history {
+  padding: 16px 16px 40px;
+}
+
+.order-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.order-history-card {
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.order-history-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.order-history-id {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.order-status-pill {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.order-status-Pending {
+  background: #FFF3CD;
+  color: #8A5A00;
+}
+
+.order-status-Preparing {
+  background: #E3F2FD;
+  color: #0277BD;
+}
+
+.order-status-Delivered {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.order-status-Cancelled {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+.order-history-items {
+  list-style: none;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.order-history-bottom {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}

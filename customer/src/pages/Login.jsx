@@ -1,30 +1,76 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { HiArrowLeft } from "react-icons/hi2";
+import { FcGoogle } from "react-icons/fc";
 import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import "./Login.css";
 
+const RECAPTCHA_CONTAINER_ID = "recaptcha-container";
+
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useCustomerAuth();
+  const { loginWithGoogle, sendOtp, verifyOtp } = useCustomerAuth();
   const { showToast } = useToast();
-  const [form, setForm] = useState({ name: "", phone: "", address: "" });
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [confirmation, setConfirmation] = useState(null);
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  function afterLogin() {
+    showToast("Signed in successfully");
+    navigate(location.state?.from || "/profile", { replace: true });
   }
 
-  function handleSubmit(e) {
+  async function handleSendOtp(e) {
     e.preventDefault();
-    if (!form.name || !form.phone) {
-      showToast("Please enter your name and phone number", "error");
+    if (!/^\d{10}$/.test(phone.replace(/\D/g, ""))) {
+      showToast("Enter a valid 10-digit mobile number", "error");
       return;
     }
-    login(form);
-    showToast(`Welcome, ${form.name}!`);
-    navigate(location.state?.from || "/profile", { replace: true });
+    setSending(true);
+    try {
+      const result = await sendOtp(phone, RECAPTCHA_CONTAINER_ID);
+      setConfirmation(result);
+      showToast("OTP sent");
+    } catch (err) {
+      showToast(err.message || "Could not send OTP", "error");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleVerifyOtp(e) {
+    e.preventDefault();
+    if (!otp) {
+      showToast("Enter the OTP", "error");
+      return;
+    }
+    setVerifying(true);
+    try {
+      await verifyOtp(confirmation, otp);
+      afterLogin();
+    } catch (err) {
+      showToast(err.message || "Invalid OTP", "error");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function handleGoogle() {
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle();
+      afterLogin();
+    } catch (err) {
+      showToast(err.message || "Google sign-in failed", "error");
+    } finally {
+      setGoogleLoading(false);
+    }
   }
 
   return (
@@ -37,37 +83,63 @@ export default function Login() {
       </div>
 
       <p className="customer-login-subtitle">
-        Save your details for faster checkout next time — no password needed.
+        Sign in to place orders and track your order status.
       </p>
 
-      <form className="payment-form" onSubmit={handleSubmit}>
-        <label>
-          Full Name
-          <input name="name" value={form.name} onChange={handleChange} placeholder="Your name" />
-        </label>
-        <label>
-          Phone Number
-          <input
-            name="phone"
-            value={form.phone}
-            onChange={handleChange}
-            placeholder="10-digit mobile number"
-          />
-        </label>
-        <label>
-          Delivery Address (optional)
-          <textarea
-            name="address"
-            value={form.address}
-            onChange={handleChange}
-            placeholder="House no, street, area, city, pincode"
-            rows={3}
-          />
-        </label>
-        <button className="btn btn-primary btn-block" type="submit">
-          Continue
-        </button>
-      </form>
+      <button
+        type="button"
+        className="btn btn-outline btn-block customer-login-google"
+        onClick={handleGoogle}
+        disabled={googleLoading}
+      >
+        <FcGoogle /> {googleLoading ? "Signing in..." : "Continue with Google"}
+      </button>
+
+      <div className="customer-login-divider">
+        <span>or</span>
+      </div>
+
+      {!confirmation ? (
+        <form className="payment-form" onSubmit={handleSendOtp}>
+          <label>
+            Mobile Number
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="10-digit mobile number"
+              inputMode="numeric"
+            />
+          </label>
+          <button className="btn btn-primary btn-block" type="submit" disabled={sending}>
+            {sending ? "Sending OTP..." : "Send OTP"}
+          </button>
+        </form>
+      ) : (
+        <form className="payment-form" onSubmit={handleVerifyOtp}>
+          <label>
+            Enter OTP
+            <input
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              placeholder="6-digit code"
+              inputMode="numeric"
+            />
+          </label>
+          <button className="btn btn-primary btn-block" type="submit" disabled={verifying}>
+            {verifying ? "Verifying..." : "Verify OTP"}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-block"
+            onClick={() => setConfirmation(null)}
+          >
+            Change number
+          </button>
+        </form>
+      )}
+
+      {/* Firebase renders its invisible reCAPTCHA challenge into this container. */}
+      <div id={RECAPTCHA_CONTAINER_ID} />
     </div>
   );
 }
