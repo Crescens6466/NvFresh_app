@@ -160,15 +160,22 @@ error until it's configured.
    VITE_FIREBASE_MESSAGING_SENDER_ID=...
    VITE_FIREBASE_APP_ID=...
    ```
-5. **Project settings → Service accounts → Generate new private key** → downloads a JSON
-   file. Paste its **entire contents as a single line** into `server/.env`:
+5. The backend also needs to know your project ID, in `server/.env`:
    ```
-   FIREBASE_SERVICE_ACCOUNT={"type":"service_account","project_id":"...", ...}
+   FIREBASE_PROJECT_ID=nvfresh-xxxxx
    ```
-   Never commit this file or value to git — it's a credential, same handling as
-   `MONGODB_URI`.
+   (Same value as `VITE_FIREBASE_PROJECT_ID` above.) No service account key or other secret
+   is needed on the backend — verifying a customer's sign-in only requires Google's public
+   signing certs, fetched at `server/firebaseTokenVerify.js`, not a private credential.
 6. Restart both the customer dev server and the backend (or redeploy, setting the same env
    vars in Vercel/Render's environment variable settings).
+
+> Why not the `firebase-admin` SDK? It's the more common approach, but it's a large package
+> with dependencies (gRPC, protobuf, etc.) that don't bundle reliably in serverless
+> environments like Vercel. Token verification only needs the signature check against
+> Google's public certs — `server/firebaseTokenVerify.js` does that directly with the
+> `jsonwebtoken` package already used for admin auth, avoiding the bundling problem and the
+> service-account secret entirely.
 
 Orders placed before this was added won't have a linked customer identity, so they won't
 appear in "My Orders" — only new orders placed after sign-in was enabled do.
