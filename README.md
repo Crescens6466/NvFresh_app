@@ -134,28 +134,34 @@ Authenticated routes expect `Authorization: Bearer <token>`.
 
 ## WhatsApp Order Notifications (optional)
 
-When a customer places an order, the server can automatically send them a WhatsApp
-confirmation via the Meta WhatsApp Cloud API. This is **off by default** — the app works
-normally without it, and just logs `WhatsApp not configured — skipping order notification`.
+When a customer places an order, the server can automatically send a WhatsApp confirmation
+to the customer **and** an alert to the admin, both via the Meta WhatsApp Cloud API. This is
+**off by default** — the app works normally without it, and just logs `WhatsApp not
+configured — skipping order notification`.
 
 To turn it on:
 
 1. Create a free app at [developers.facebook.com](https://developers.facebook.com) and add
    the **WhatsApp** product. Meta gives you a test phone number to start with.
 2. From **WhatsApp → API Setup**, copy your **temporary access token** and **Phone Number ID**.
-3. In **WhatsApp → Message Templates**, create and submit a template named
-   `order_confirmation` with a **Body** component containing 4 placeholders, e.g.:
-   > Hi {{1}}, your NvFresh order #{{2}} for {{3}} has been placed. Advance paid: {{4}}. Confirmed Saturday, delivered fresh this Sunday morning!
+3. In **WhatsApp → Message Templates**, create and submit **two** templates:
+   - `order_confirmation` (sent to the customer) — a **Body** component with 4 placeholders:
+     > Hi {{1}}, your NvFresh order #{{2}} for {{3}} has been placed. Advance paid: {{4}}. Confirmed Saturday, delivered fresh this Sunday morning!
+   - `order_alert_admin` (sent to you) — a **Body** component with 4 placeholders:
+     > New order #{{2}} from {{1}} — {{3}}. Customer phone: {{4}}.
 
-   Template approval is usually quick, but isn't instant — submit it first.
+   Template approval is usually quick, but isn't instant — submit both before testing.
 4. Copy `server/.env.example` to `server/.env` and fill in the values:
    ```
    WHATSAPP_ACCESS_TOKEN=your_token_here
    WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id_here
    WHATSAPP_TEMPLATE_NAME=order_confirmation
+   WHATSAPP_ADMIN_TEMPLATE_NAME=order_alert_admin
    ```
-5. Restart the server (`npm start`). New orders will now trigger a WhatsApp message to the
-   customer's phone number automatically.
+5. Restart the server (`npm start`). New orders will now trigger a WhatsApp confirmation to
+   the customer, and an alert to whatever phone number is set in **Admin → Settings** (the
+   same one shown on the customer site's Contact Us page) — no separate admin number to
+   configure.
 
 > Note: Meta's temporary tokens expire in 24 hours — for production use, generate a
 > permanent token from a System User in Meta Business Manager.

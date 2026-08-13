@@ -2,8 +2,9 @@
 import express from "express";
 import Order from "../models/Order.js";
 import Customer from "../models/Customer.js";
+import Settings from "../models/Settings.js";
 import { requireAuth } from "../middleware/auth.js";
-import { sendOrderConfirmation } from "../utils/notify.js";
+import { sendOrderConfirmation, sendAdminOrderAlert } from "../utils/notify.js";
 import { toClient, toClientList } from "../utils/serialize.js";
 
 const router = express.Router();
@@ -51,6 +52,9 @@ router.post("/", async (req, res, next) => {
 
     // Fire-and-forget — a notification failure should never block order placement.
     sendOrderConfirmation(clientOrder);
+    Settings.findOne()
+      .then((settings) => sendAdminOrderAlert(clientOrder, settings?.phone_number))
+      .catch((err) => console.error(`[notify] Could not load Settings for admin alert:`, err.message));
 
     res.status(201).json(clientOrder);
   } catch (err) {

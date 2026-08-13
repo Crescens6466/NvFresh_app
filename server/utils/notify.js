@@ -1,4 +1,4 @@
-// utils/notify.js — sends an order confirmation via WhatsApp (Meta Cloud API).
+// utils/notify.js — sends order-related messages via WhatsApp (Meta Cloud API).
 // Safe no-op if WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID aren't set,
 // so the app works fine without WhatsApp configured.
 
@@ -12,42 +12,30 @@ function normalizePhone(phone) {
   return digits;
 }
 
-export async function sendOrderConfirmation(order) {
-  const {
-    WHATSAPP_ACCESS_TOKEN,
-    WHATSAPP_PHONE_NUMBER_ID,
-    WHATSAPP_TEMPLATE_NAME = "order_confirmation",
-    WHATSAPP_TEMPLATE_LANG = "en",
-  } = process.env;
-
+// Both order confirmations (to the customer) and order alerts (to the admin)
+// are business-initiated, so WhatsApp requires a pre-approved message
+// template for each (create + approve these in Meta Business Manager first
+// — see README).
+async function sendWhatsAppTemplate({ to, templateName, templateLang, parameters, logLabel }) {
+  const { WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID } = process.env;
   if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
-    console.log("[notify] WhatsApp not configured — skipping order notification");
+    console.log(`[notify] WhatsApp not configured — skipping ${logLabel}`);
     return;
   }
 
-  const to = normalizePhone(order.phone);
+  const recipient = normalizePhone(to);
   const url = `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
-
-  // Order confirmations are business-initiated, so WhatsApp requires a
-  // pre-approved message template (create + approve this in Meta Business
-  // Manager first — see README). Adjust the parameters below to match
-  // whatever placeholders your approved template actually has.
   const body = {
     messaging_product: "whatsapp",
-    to,
+    to: recipient,
     type: "template",
     template: {
-      name: WHATSAPP_TEMPLATE_NAME,
-      language: { code: WHATSAPP_TEMPLATE_LANG },
+      name: templateName,
+      language: { code: templateLang },
       components: [
         {
           type: "body",
-          parameters: [
-            { type: "text", text: order.customer_name },
-            { type: "text", text: String(order.id) },
-            { type: "text", text: `Rs.${order.total}` },
-            { type: "text", text: `Rs.${order.advance_paid}` },
-          ],
+          parameters: parameters.map((text) => ({ type: "text", text })),
         },
       ],
     },
@@ -64,11 +52,43 @@ export async function sendOrderConfirmation(order) {
     });
     if (!res.ok) {
       const errText = await res.text();
-      console.error(`[notify] WhatsApp send failed for order #${order.id}:`, errText);
+      console.error(`[notify] ${logLabel} failed:`, errText);
     } else {
-      console.log(`[notify] WhatsApp confirmation sent to ${to} for order #${order.id}`);
+      console.log(`[notify] ${logLabel} sent to ${recipient}`);
     }
   } catch (err) {
-    console.error(`[notify] WhatsApp send error for order #${order.id}:`, err.message);
+    console.error(`[notify] ${logLabel} error:`, err.message);
   }
+}
+
+export function sendOrderConfirmation(order) {
+  const { WHATSAPP_TEMPLATE_NAME = "order_confirmation", WHATSAPP_TEMPLATE_LANG = "en" } = process.env;
+  return sendWhatsAppTemplate({
+    to: order.phone,
+    templateName: WHATSAPP_TEMPLATE_NAME,
+    templateLang: WHATSAPP_TEMPLATE_LANG,
+    parameters: [order.customer_name, String(order.id), `Rs.${order.total}`, `Rs.${order.advance_paid}`],
+    logLabel: `order confirmation for order #${order.id}`,
+  });
+}
+
+// adminPhone comes from Settings (the same number shown on the customer
+// site's Contact Us page) — passed in by the caller rather than read here,
+// since it's a DB-backed value and this module has no DB access of its own.
+export function sendAdminOrderAlert(order, adminPhone) {
+  if (!adminPhone) {
+    console.log(`[notify] No admin phone number configured — skipping admin alert for order #${order.id}`);
+    return;
+  }
+  const {
+    WHATSAPP_ADMIN_TEMPLATE_NAME = "order_alert_admin",
+    WHATSAPP_ADMIN_TEMPLATE_LANG = "en",
+  } = process.env;
+  return sendWhatsAppTemplate({
+    to: adminPhone,
+    templateName: WHATSAPP_ADMIN_TEMPLATE_NAME,
+    templateLang: WHATSAPP_ADMIN_TEMPLATE_LANG,
+    parameters: [order.customer_name, String(order.id), `Rs.${order.total}`, order.phone],
+    logLabel: `admin order alert for order #${order.id}`,
+  });
 }
