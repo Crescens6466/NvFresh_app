@@ -4,7 +4,24 @@ import Product from "./models/Product.js";
 import Admin from "./models/Admin.js";
 import Settings from "./models/Settings.js";
 
-export async function connectDB() {
+// In a serverless runtime (Vercel), connectDB() is called on every
+// invocation — a warm instance should reuse its existing connection rather
+// than reconnecting, and concurrent cold-start invocations should share one
+// in-flight connection attempt rather than racing.
+let connectingPromise = null;
+
+export function connectDB() {
+  if (mongoose.connection.readyState === 1) return Promise.resolve();
+  if (connectingPromise) return connectingPromise;
+
+  connectingPromise = doConnect().catch((err) => {
+    connectingPromise = null;
+    throw err;
+  });
+  return connectingPromise;
+}
+
+async function doConnect() {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
     throw new Error(
