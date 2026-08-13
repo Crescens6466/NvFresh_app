@@ -58,8 +58,9 @@ You should see `Connected to MongoDB` in the console — if you instead see a co
 error, double-check your `MONGODB_URI`, DB user password, and that `0.0.0.0/0` is
 allowed under Network Access in Atlas.
 
-Uploaded product/QR images are still stored on local disk in `server/uploads/` and
-served at `/uploads/...` — this part didn't move to MongoDB (see **Notes** below).
+Uploaded product/QR images are stored inside your MongoDB Atlas cluster via GridFS by
+default (served back out at `/api/files/...`) — no separate file storage service needed.
+See **File Storage** below for how to switch providers later.
 
 ### 2. Customer website
 
@@ -208,18 +209,34 @@ falls back to a demo session if the real login request fails. This only gets you
 the login screen, though: pages like Products, Orders, and Customers still need
 `VITE_API_URL` pointed at a real, running backend to show actual data.
 
+## File Storage
+
+Uploaded images (product photos, admin's QR code) go through a small storage
+abstraction in `server/storage/` instead of talking to a specific backend directly.
+Every provider implements the same two methods — `upload(buffer, meta) → { url, key }`
+and `delete(key)` — so routes and models only ever handle the `url` string; they don't
+know or care which backend produced it.
+
+| `STORAGE_PROVIDER` | Where files live | Notes |
+|---|---|---|
+| `gridfs` (default) | Inside your MongoDB Atlas cluster (GridFS) | No extra service — just `MONGODB_URI`. Served back out at `/api/files/:id`. |
+| `local` | `server/uploads/` on disk | Dev/fallback only. Wiped on redeploy on most hosts; doesn't work on Vercel serverless. |
+| `s3` | Amazon S3 or any S3-compatible bucket (R2, Spaces, B2, MinIO) | Run `npm install @aws-sdk/client-s3`, set the `S3_*` vars in `.env`. Files are served directly from the bucket, not proxied through the API. |
+
+Switching providers later (e.g. GridFS → S3 as you scale, or S3 → another cloud) is a
+matter of setting env vars — no code changes, no data migration of the `image`/`qr_image`
+fields, since they've always just stored a URL string. To add a brand-new backend
+(Cloudinary, Azure Blob, GCS, etc.), write one class in `server/storage/` implementing
+`StorageProvider` and add a case to the switch in `server/storage/index.js`; use
+`S3StorageProvider.js` as a template.
+
+Product photos also ship as generated placeholder SVGs in `server/uploads/seed/` so the
+app runs out of the box with no external dependencies — those are static app assets, not
+user uploads, and stay on disk regardless of `STORAGE_PROVIDER`. Swap in real photos from
+the admin panel any time.
+
 ## Notes
 
-- Product photos ship as generated placeholder SVGs in `server/uploads/seed/` so the app
-  runs out of the box with no external image dependencies — swap in real photos from the
-  admin panel any time.
 - The payment page shows a QR **placeholder** icon plus the UPI ID/phone from Settings;
   swap in a real QR image via Admin → Settings → Upload QR Image.
 - `JWT_SECRET` in `server/middleware/auth.js` is a dev default — change it before deploying.
-- **Image uploads still live on local disk**, not MongoDB. Product photos and the QR
-  code you upload via the admin panel are saved to `server/uploads/` on whichever
-  machine runs the backend. This works fine on Render/Railway between requests, but on
-  most free tiers that disk gets wiped on redeploy or restart, and it won't work at all
-  on Vercel serverless (read-only filesystem). If that becomes a problem, the fix is
-  swapping Multer's local disk storage for a hosted file store like Cloudinary or S3 —
-  ask if you'd like that built in.

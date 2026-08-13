@@ -13,6 +13,7 @@ import authRouter from "./routes/auth.js";
 import uploadRouter from "./routes/upload.js";
 import settingsRouter from "./routes/settings.js";
 import dashboardRouter from "./routes/dashboard.js";
+import filesRouter from "./routes/files.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -32,6 +33,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/upload", uploadRouter);
 app.use("/api/settings", settingsRouter);
 app.use("/api/dashboard", dashboardRouter);
+app.use("/api/files", filesRouter);
 
 // central error handler (e.g. multer file-type errors, Mongoose errors)
 app.use((err, req, res, next) => {
