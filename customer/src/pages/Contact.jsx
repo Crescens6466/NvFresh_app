@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   HiArrowLeft,
@@ -9,15 +9,28 @@ import {
   HiOutlineTruck,
 } from "react-icons/hi2";
 import { FaWhatsapp } from "react-icons/fa";
+import { api } from "../api.js";
 import "./StaticPage.css";
 
-// Keep this in sync with the phone number shown below / in Admin → Settings.
-const WHATSAPP_NUMBER = "919876543210";
+const DEFAULT_PHONE = "+91 98765 43210";
 const WHATSAPP_MESSAGE = "Hi NvFresh, I have a question about my order.";
-const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 
 export default function Contact() {
   const navigate = useNavigate();
+  const [phone, setPhone] = useState(DEFAULT_PHONE);
+
+  useEffect(() => {
+    api
+      .getSettings()
+      .then((s) => {
+        if (s?.phone_number) setPhone(s.phone_number);
+      })
+      .catch(() => {});
+  }, []);
+
+  const whatsappNumber = phone.replace(/\D/g, "");
+  const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+
   return (
     <div className="static-page page-fade">
       <div className="static-page-back">
@@ -30,7 +43,7 @@ export default function Contact() {
       <p>Have a question about your order or our products? We're here to help.</p>
 
       <a
-        href={WHATSAPP_LINK}
+        href={whatsappLink}
         target="_blank"
         rel="noopener noreferrer"
         className="btn btn-primary contact-whatsapp-btn"
@@ -43,7 +56,7 @@ export default function Contact() {
           <HiOutlinePhone />
           <div>
             <h5>Call Us</h5>
-            <p>+91 98765 43210</p>
+            <p>{phone}</p>
           </div>
         </div>
         <div className="contact-item">

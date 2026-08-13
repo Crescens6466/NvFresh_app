@@ -32,6 +32,17 @@ async function request(path, options = {}) {
       ...options.headers,
     },
   });
+  // A 401 while we sent a token means the session died (expired, or a stale
+  // offline-demo token) — not a login attempt, since login never sends one.
+  // Every write would otherwise keep silently failing with a confusing
+  // "Invalid or expired token" toast until the user thinks to log out
+  // manually. Clear it and send them back to log in again immediately.
+  if (res.status === 401 && token) {
+    window.localStorage.removeItem("nvfresh_admin_token");
+    window.localStorage.removeItem("nvfresh_admin_username");
+    window.location.href = "/login";
+    throw new Error("Session expired. Please log in again.");
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Request failed" }));
     throw new Error(err.error || "Request failed");
