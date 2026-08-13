@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { HiOutlineMinus, HiOutlinePlus, HiOutlineTrash, HiOutlineShoppingCart, HiOutlineTruck } from "react-icons/hi2";
 import { useCart } from "../context/CartContext.jsx";
+import { resolveImageUrl } from "../api.js";
 import "./Cart.css";
 
 export default function Cart() {
@@ -28,7 +29,7 @@ export default function Cart() {
       <div className="cart-list">
         {items.map((item) => (
           <div className="cart-item" key={item.key}>
-            <img src={item.image} alt={item.name} className="cart-item-image" />
+            <img src={resolveImageUrl(item.image)} alt={item.name} className="cart-item-image" />
             <div className="cart-item-info">
               <h4>{item.name}</h4>
               <p className="cart-item-weight">{item.weight}</p>

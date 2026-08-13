@@ -4,6 +4,7 @@ import { HiOutlineHeart, HiHeart } from "react-icons/hi2";
 import { useCart } from "../context/CartContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { priceForWeight } from "../utils.js";
+import { resolveImageUrl } from "../api.js";
 import "./ProductCard.css";
 
 const badgeClass = {
@@ -36,7 +37,7 @@ export default function ProductCard({ product }) {
   return (
     <div className="product-card" onClick={() => navigate(`/product/${product.id}`)}>
       <div className="product-card-image-wrap">
-        <img src={product.image} alt={product.name} className="product-card-image" loading="lazy" />
+        <img src={resolveImageUrl(product.image)} alt={product.name} className="product-card-image" loading="lazy" />
         {product.badge && (
           <span className={`badge product-card-badge ${badgeClass[product.badge] || ""}`}>
             {product.badge}

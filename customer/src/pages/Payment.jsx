@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { HiArrowLeft, HiOutlineQrCode, HiOutlineTruck } from "react-icons/hi2";
 import { useCart } from "../context/CartContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
-import { api } from "../api.js";
+import { api, resolveImageUrl } from "../api.js";
 import "./Payment.css";
 
 export default function Payment() {
@@ -86,7 +86,7 @@ export default function Payment() {
       <div className="payment-qr-card">
         <div className={`payment-qr-box ${settings?.qr_image ? "has-image" : ""}`}>
           {settings?.qr_image ? (
-            <img src={settings.qr_image} alt="Payment QR code" className="payment-qr-image" />
+            <img src={resolveImageUrl(settings.qr_image)} alt="Payment QR code" className="payment-qr-image" />
           ) : (
             <HiOutlineQrCode />
           )}

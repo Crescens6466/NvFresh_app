@@ -9,7 +9,7 @@ import {
   HiOutlineMinus,
   HiOutlinePlus,
 } from "react-icons/hi2";
-import { api } from "../api.js";
+import { api, resolveImageUrl } from "../api.js";
 import { useCart } from "../context/CartContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { priceForWeight } from "../utils.js";
@@ -87,7 +87,7 @@ export default function ProductDetails() {
         <button className="pd-back" onClick={() => navigate(-1)} aria-label="Go back">
           <HiArrowLeft />
         </button>
-        <img src={product.image} alt={product.name} className="pd-image" />
+        <img src={resolveImageUrl(product.image)} alt={product.name} className="pd-image" />
         {product.badge && <span className="badge pd-badge">{product.badge}</span>}
       </div>
 

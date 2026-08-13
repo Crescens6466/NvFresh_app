@@ -5,6 +5,18 @@
 // set VITE_API_URL to your deployed backend's URL, e.g.:
 //   VITE_API_URL=https://nvfresh-api.onrender.com/api
 const BASE = import.meta.env.VITE_API_URL || "/api";
+const API_ORIGIN = BASE.startsWith("http") ? BASE.replace(/\/api\/?$/, "") : "";
+
+// Product/QR images come back as paths relative to the backend (e.g.
+// "/api/files/xxx"). In dev, Vite's proxy makes that resolve correctly against
+// the frontend's own origin; in production, frontend and backend are on
+// different domains, so an <img src="/api/files/xxx"> would otherwise
+// request the frontend's own domain and get its SPA fallback HTML instead.
+export function resolveImageUrl(path) {
+  if (!path) return path;
+  if (/^https?:\/\//.test(path)) return path;
+  return `${API_ORIGIN}${path}`;
+}
 
 function getToken() {
   return window.localStorage.getItem("nvfresh_admin_token");

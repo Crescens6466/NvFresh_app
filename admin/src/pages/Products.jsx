@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { HiOutlinePlus, HiOutlinePencilSquare, HiOutlineTrash, HiOutlineCube, HiOutlineXMark } from "react-icons/hi2";
-import { api } from "../api.js";
+import { api, resolveImageUrl } from "../api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import "./Products.css";
 
@@ -142,7 +142,7 @@ export default function Products() {
         <div className="products-grid">
           {products.map((p) => (
             <div className="product-admin-card" key={p.id}>
-              <img src={p.image} alt={p.name} />
+              <img src={resolveImageUrl(p.image)} alt={p.name} />
               <div className="product-admin-body">
                 <div className="product-admin-top">
                   <h4>{p.name}</h4>
@@ -182,7 +182,7 @@ export default function Products() {
                 <label>Product Image</label>
                 <div className="image-upload">
                   {form.image ? (
-                    <img src={form.image} alt="preview" />
+                    <img src={resolveImageUrl(form.image)} alt="preview" />
                   ) : (
                     <div className="image-upload-placeholder">
                       <HiOutlineCube />

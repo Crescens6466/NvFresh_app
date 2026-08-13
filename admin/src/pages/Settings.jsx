@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { HiOutlineQrCode } from "react-icons/hi2";
-import { api } from "../api.js";
+import { api, resolveImageUrl } from "../api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import "./Settings.css";
 
@@ -87,7 +87,7 @@ export default function Settings() {
           <label>Payment QR Code</label>
           <div className="settings-qr-upload">
             {form.qrImage ? (
-              <img src={form.qrImage} alt="QR" />
+              <img src={resolveImageUrl(form.qrImage)} alt="QR" />
             ) : (
               <div className="settings-qr-placeholder">
                 <HiOutlineQrCode />
