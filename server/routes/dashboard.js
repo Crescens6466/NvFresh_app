@@ -22,7 +22,11 @@ router.get("/stats", requireAuth, async (req, res, next) => {
             $group: {
               _id: null,
               revenue: { $sum: "$total" },
-              advanceCollected: { $sum: "$advance_paid" },
+              // Only count advances the admin has actually verified — a
+              // submitted UTR isn't confirmed money until reviewed.
+              advanceCollected: {
+                $sum: { $cond: [{ $eq: ["$advance_payment_status", "Paid"] }, "$advance_paid", 0] },
+              },
             },
           },
         ]),

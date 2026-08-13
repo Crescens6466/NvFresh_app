@@ -50,5 +50,18 @@ export const api = {
       body: JSON.stringify(order),
       headers: authHeaders(token),
     }),
+  // items: [{ productId, weight, quantity }] — price/total are never sent;
+  // the backend recomputes everything from the database and returns the
+  // authoritative totals plus a QR for the selected advance amount.
+  getOrderQuote: (items, advancePercentage, token) =>
+    request(`/orders/quote`, {
+      method: "POST",
+      body: JSON.stringify({ items, advancePercentage }),
+      headers: authHeaders(token),
+    }),
   getMyOrders: (token) => request(`/orders/mine`, { headers: authHeaders(token) }),
+  sendPhoneOtp: (phone) =>
+    request(`/customer-auth/send-otp`, { method: "POST", body: JSON.stringify({ phone }) }),
+  verifyPhoneOtp: (phone, code) =>
+    request(`/customer-auth/verify-otp`, { method: "POST", body: JSON.stringify({ phone, code }) }),
 };

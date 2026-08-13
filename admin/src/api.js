@@ -65,6 +65,8 @@ export const api = {
   getOrders: () => request(`/orders`),
   updateOrderStatus: (id, status) =>
     request(`/orders/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) }),
+  updatePaymentStatus: (id, status) =>
+    request(`/orders/${id}/payment-status`, { method: "PUT", body: JSON.stringify({ status }) }),
 
   getCustomers: (search) =>
     request(`/customers${search ? `?search=${encodeURIComponent(search)}` : ""}`),

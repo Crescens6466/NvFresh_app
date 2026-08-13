@@ -6,8 +6,6 @@ import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import "./Login.css";
 
-const RECAPTCHA_CONTAINER_ID = "recaptcha-container";
-
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -16,7 +14,7 @@ export default function Login() {
 
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [confirmation, setConfirmation] = useState(null);
+  const [otpSent, setOtpSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -34,9 +32,9 @@ export default function Login() {
     }
     setSending(true);
     try {
-      const result = await sendOtp(phone, RECAPTCHA_CONTAINER_ID);
-      setConfirmation(result);
-      showToast("OTP sent");
+      await sendOtp(phone);
+      setOtpSent(true);
+      showToast("OTP sent via WhatsApp");
     } catch (err) {
       showToast(err.message || "Could not send OTP", "error");
     } finally {
@@ -52,7 +50,7 @@ export default function Login() {
     }
     setVerifying(true);
     try {
-      await verifyOtp(confirmation, otp);
+      await verifyOtp(phone, otp);
       afterLogin();
     } catch (err) {
       showToast(err.message || "Invalid OTP", "error");
@@ -99,7 +97,7 @@ export default function Login() {
         <span>or</span>
       </div>
 
-      {!confirmation ? (
+      {!otpSent ? (
         <form className="payment-form" onSubmit={handleSendOtp}>
           <label>
             Mobile Number
@@ -111,13 +109,13 @@ export default function Login() {
             />
           </label>
           <button className="btn btn-primary btn-block" type="submit" disabled={sending}>
-            {sending ? "Sending OTP..." : "Send OTP"}
+            {sending ? "Sending OTP..." : "Send OTP via WhatsApp"}
           </button>
         </form>
       ) : (
         <form className="payment-form" onSubmit={handleVerifyOtp}>
           <label>
-            Enter OTP
+            Enter OTP (sent via WhatsApp)
             <input
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
@@ -131,15 +129,12 @@ export default function Login() {
           <button
             type="button"
             className="btn btn-ghost btn-block"
-            onClick={() => setConfirmation(null)}
+            onClick={() => setOtpSent(false)}
           >
             Change number
           </button>
         </form>
       )}
-
-      {/* Firebase renders its invisible reCAPTCHA challenge into this container. */}
-      <div id={RECAPTCHA_CONTAINER_ID} />
     </div>
   );
 }

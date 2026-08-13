@@ -134,20 +134,29 @@ All routes are prefixed with `/api`.
 | GET    | /dashboard/stats           | Admin | Aggregate dashboard stats      |
 
 Admin routes expect `Authorization: Bearer <JWT from /auth/login>`. Customer routes expect
-`Authorization: Bearer <Firebase ID token>` — see Customer Login below.
+`Authorization: Bearer <session token>` — either a Firebase ID token (Google sign-in) or the
+app's own JWT (phone/OTP sign-in) — see Customer Login below.
 
-## Customer Login (Firebase — phone/OTP or Google)
+## Customer Login (Google via Firebase, or phone/OTP via WhatsApp)
 
-Checkout, order placement, and order history all require the customer to be signed in via
-Firebase Authentication. This is a **required** setup step — without it, customers can still
-browse and add to cart, but Login/Checkout/My Orders will show a "Sign-in isn't set up yet"
-error until it's configured.
+Checkout, order placement, and order history all require the customer to be signed in. This
+is a **required** setup step — without it, customers can still browse and add to cart, but
+Login/Checkout/My Orders won't work until it's configured.
+
+Two independent sign-in methods, so customers can use whichever they prefer:
+
+- **Google** — via Firebase Authentication, completely free.
+- **Phone/OTP** — a custom flow: the backend generates a 6-digit code and sends it as a
+  WhatsApp message (reusing the same Meta Cloud API already used for order notifications),
+  then verifies it and issues its own session token. This deliberately **doesn't use
+  Firebase's phone auth**, since that requires attaching a billing account (Firebase's
+  "Blaze" plan) even to stay within the free SMS quota — WhatsApp delivery has no such
+  requirement.
+
+### Google sign-in setup
 
 1. Go to [console.firebase.google.com](https://console.firebase.google.com) → **Add project**.
-2. **Build → Authentication → Get started → Sign-in method** → enable **Phone** and **Google**.
-   > Phone/OTP requires attaching a billing account (Firebase's "Blaze" plan) even to stay
-   > within the free quota — Google Sign-in is free with no billing account needed. You can
-   > enable just Google first and add Phone later.
+2. **Build → Authentication → Get started → Sign-in method** → enable **Google**.
 3. **Authentication → Settings → Authorized domains** → add your production domain(s), e.g.
    `nvfresh.in` and `www.nvfresh.in` (`localhost` is included by default for local dev).
 4. **Project settings (gear icon) → General → Your apps** → register a new **Web app** → copy
@@ -165,17 +174,37 @@ error until it's configured.
    FIREBASE_PROJECT_ID=nvfresh-xxxxx
    ```
    (Same value as `VITE_FIREBASE_PROJECT_ID` above.) No service account key or other secret
-   is needed on the backend — verifying a customer's sign-in only requires Google's public
-   signing certs, fetched at `server/firebaseTokenVerify.js`, not a private credential.
-6. Restart both the customer dev server and the backend (or redeploy, setting the same env
-   vars in Vercel/Render's environment variable settings).
+   is needed on the backend — verifying a customer's Google sign-in only requires Google's
+   public signing certs, fetched at `server/firebaseTokenVerify.js`, not a private
+   credential.
 
-> Why not the `firebase-admin` SDK? It's the more common approach, but it's a large package
-> with dependencies (gRPC, protobuf, etc.) that don't bundle reliably in serverless
+> Why not the `firebase-admin` SDK for this? It's the more common approach, but it's a large
+> package with dependencies (gRPC, protobuf, etc.) that don't bundle reliably in serverless
 > environments like Vercel. Token verification only needs the signature check against
 > Google's public certs — `server/firebaseTokenVerify.js` does that directly with the
 > `jsonwebtoken` package already used for admin auth, avoiding the bundling problem and the
 > service-account secret entirely.
+
+### Phone/OTP sign-in setup
+
+Reuses the WhatsApp Cloud API setup from **WhatsApp Order Notifications** below
+(`WHATSAPP_ACCESS_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID`) — set that up first if you haven't.
+Then:
+
+1. In Meta's **WhatsApp → Message Templates**, create and submit a template named
+   `customer_otp`, category **Authentication** (Meta has a dedicated category for OTP
+   templates, distinct from Utility), with a **Body** component and 1 placeholder:
+   > Your NvFresh verification code is {{1}}. It expires in 5 minutes.
+2. Add to `server/.env`:
+   ```
+   WHATSAPP_OTP_TEMPLATE_NAME=customer_otp
+   CUSTOMER_JWT_SECRET=some-random-string-change-this
+   ```
+   `CUSTOMER_JWT_SECRET` signs the session token issued after a successful OTP verification
+   — use a real random value in production, same handling as the admin `JWT_SECRET`.
+
+Restart both the customer dev server and the backend after either setup (or redeploy,
+setting the same env vars on your hosting provider).
 
 Orders placed before this was added won't have a linked customer identity, so they won't
 appear in "My Orders" — only new orders placed after sign-in was enabled do.

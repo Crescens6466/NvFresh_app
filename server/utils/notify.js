@@ -1,6 +1,7 @@
-// utils/notify.js — sends order-related messages via WhatsApp (Meta Cloud API).
-// Safe no-op if WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID aren't set,
-// so the app works fine without WhatsApp configured.
+// utils/notify.js — sends order-related and OTP messages via WhatsApp (Meta
+// Cloud API). Order/admin notifications are best-effort (never block the
+// caller); OTP delivery is not — the customer is waiting on it, so
+// sendOtpWhatsApp() throws on failure instead of swallowing it.
 
 const WHATSAPP_API_VERSION = "v20.0";
 
@@ -12,15 +13,13 @@ function normalizePhone(phone) {
   return digits;
 }
 
-// Both order confirmations (to the customer) and order alerts (to the admin)
-// are business-initiated, so WhatsApp requires a pre-approved message
-// template for each (create + approve these in Meta Business Manager first
-// — see README).
-async function sendWhatsAppTemplate({ to, templateName, templateLang, parameters, logLabel }) {
+// All of these are business-initiated messages, so WhatsApp requires a
+// pre-approved template for each (create + approve these in Meta Business
+// Manager first — see README).
+async function sendWhatsAppMessage({ to, templateName, templateLang, parameters }) {
   const { WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID } = process.env;
   if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
-    console.log(`[notify] WhatsApp not configured — skipping ${logLabel}`);
-    return;
+    throw new Error("WhatsApp is not configured");
   }
 
   const recipient = normalizePhone(to);
@@ -41,23 +40,32 @@ async function sendWhatsAppTemplate({ to, templateName, templateLang, parameters
     },
   };
 
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`WhatsApp send failed: ${await res.text()}`);
+  }
+  return recipient;
+}
+
+// Best-effort variant for order notifications — never throws, since a
+// failure here should never block order placement or status updates.
+async function sendWhatsAppTemplate({ to, templateName, templateLang, parameters, logLabel }) {
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error(`[notify] ${logLabel} failed:`, errText);
-    } else {
-      console.log(`[notify] ${logLabel} sent to ${recipient}`);
-    }
+    const recipient = await sendWhatsAppMessage({ to, templateName, templateLang, parameters });
+    console.log(`[notify] ${logLabel} sent to ${recipient}`);
   } catch (err) {
-    console.error(`[notify] ${logLabel} error:`, err.message);
+    if (err.message === "WhatsApp is not configured") {
+      console.log(`[notify] WhatsApp not configured — skipping ${logLabel}`);
+    } else {
+      console.error(`[notify] ${logLabel} failed:`, err.message);
+    }
   }
 }
 
@@ -90,5 +98,18 @@ export function sendAdminOrderAlert(order, adminPhone) {
     templateLang: WHATSAPP_ADMIN_TEMPLATE_LANG,
     parameters: [order.customer_name, String(order.id), `Rs.${order.total}`, order.phone],
     logLabel: `admin order alert for order #${order.id}`,
+  });
+}
+
+// Customer phone-login OTP — the customer is actively waiting on this, so
+// unlike the notifications above, failure here must be surfaced (thrown),
+// not swallowed.
+export async function sendOtpWhatsApp(phone, code) {
+  const { WHATSAPP_OTP_TEMPLATE_NAME = "customer_otp", WHATSAPP_OTP_TEMPLATE_LANG = "en" } = process.env;
+  await sendWhatsAppMessage({
+    to: phone,
+    templateName: WHATSAPP_OTP_TEMPLATE_NAME,
+    templateLang: WHATSAPP_OTP_TEMPLATE_LANG,
+    parameters: [code],
   });
 }

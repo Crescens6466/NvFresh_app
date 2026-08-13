@@ -46,7 +46,12 @@ export default function OrderHistory() {
             <div className="order-history-card" key={o.id}>
               <div className="order-history-top">
                 <span className="order-history-id">#{o.id.slice(-6)}</span>
-                <span className={`order-status-pill order-status-${o.status}`}>{o.status}</span>
+                <span className="order-history-pills">
+                  <span className={`order-status-pill payment-status-${o.advance_payment_status}`}>
+                    {o.advance_payment_status}
+                  </span>
+                  <span className={`order-status-pill order-status-${o.status}`}>{o.status}</span>
+                </span>
               </div>
               <ul className="order-history-items">
                 {o.items.map((item, i) => (
@@ -57,8 +62,13 @@ export default function OrderHistory() {
               </ul>
               <div className="order-history-bottom">
                 <span>Total: ₹{o.total}</span>
-                <span>Advance paid: ₹{o.advance_paid}</span>
+                <span>Advance paid ({o.advance_percentage}%): ₹{o.advance_paid}</span>
               </div>
+              <p className={`order-history-remaining ${o.remaining_amount === 0 ? "is-full" : ""}`}>
+                {o.remaining_amount === 0
+                  ? "Fully paid — Nothing due on delivery"
+                  : `₹${o.remaining_amount} remaining — Pay on delivery`}
+              </p>
             </div>
           ))}
         </div>

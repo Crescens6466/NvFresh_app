@@ -28,7 +28,7 @@
 .orders-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 820px;
+  min-width: 1060px;
 }
 
 .orders-table th {
@@ -97,3 +97,22 @@
 .status-select.status-Preparing { background: var(--info-bg); color: var(--info); }
 .status-select.status-Delivered { background: var(--success-bg); color: var(--success); }
 .status-select.status-Cancelled { background: var(--danger-bg); color: var(--danger); }
+
+.payment-status-pill {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.payment-status-pill.status-Pending { background: var(--warning-bg); color: var(--warning); }
+.payment-status-pill.status-Verifying { background: var(--info-bg); color: var(--info); }
+.payment-status-pill.status-Paid { background: var(--success-bg); color: var(--success); }
+
+.orders-mark-paid-btn {
+  display: block;
+  margin-top: 6px;
+  padding: 5px 10px;
+  font-size: 0.72rem;
+}

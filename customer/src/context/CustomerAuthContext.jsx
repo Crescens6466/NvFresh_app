@@ -1,97 +1,92 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import {
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-} from "firebase/auth";
+import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider } from "../firebase.js";
+import { api } from "../api.js";
 
 const CustomerAuthContext = createContext(null);
 
-const NOT_CONFIGURED_ERROR = "Sign-in isn't set up yet — please check back soon.";
+// Phone sign-in doesn't use Firebase at all (avoids its paid-billing
+// requirement for SMS) — the backend sends an OTP via WhatsApp and, once
+// verified, issues its own session token. That session lives here,
+// independent of Firebase's onAuthStateChanged (which only tracks Google).
+const PHONE_SESSION_KEY = "nvfresh_phone_session";
 
-function ensureAuth() {
-  if (!auth) throw new Error(NOT_CONFIGURED_ERROR);
+function loadPhoneSession() {
+  try {
+    const raw = window.localStorage.getItem(PHONE_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 }
 
 export function CustomerAuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [firebaseUser, setFirebaseUser] = useState(null);
+  const [phoneSession, setPhoneSession] = useState(loadPhoneSession);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // auth is null when Firebase isn't configured (see firebase.js) — treat
-    // that as "no one is logged in" rather than crashing the whole app.
+    // that as "no Google session" rather than crashing; phone login is
+    // independent of this anyway.
     if (!auth) {
       setLoading(false);
       return;
     }
     const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
+      setFirebaseUser(u);
       setLoading(false);
     });
     return unsubscribe;
   }, []);
 
   async function loginWithGoogle() {
-    ensureAuth();
+    if (!auth) throw new Error("Google sign-in isn't set up yet — please check back soon.");
     await signInWithPopup(auth, googleProvider);
   }
 
-  // containerId must be an already-mounted DOM element (an invisible div in
-  // Login.jsx) — Firebase renders its reCAPTCHA challenge into it.
-  function getRecaptchaVerifier(containerId) {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, containerId, { size: "invisible" });
-    }
-    return window.recaptchaVerifier;
+  async function sendOtp(phone) {
+    await api.sendPhoneOtp(phone);
   }
 
-  async function sendOtp(phoneNumber, containerId) {
-    ensureAuth();
-    const verifier = getRecaptchaVerifier(containerId);
-    // Firebase requires E.164 format (e.g. +919876543210) — assume a bare
-    // 10-digit number is an Indian mobile, same convention as the backend's
-    // WhatsApp phone normalization.
-    const digits = phoneNumber.replace(/\D/g, "");
-    const formatted = phoneNumber.trim().startsWith("+")
-      ? phoneNumber.trim()
-      : `+91${digits}`;
-    return signInWithPhoneNumber(auth, formatted, verifier);
-  }
-
-  async function verifyOtp(confirmationResult, code) {
-    await confirmationResult.confirm(code);
+  async function verifyOtp(phone, code) {
+    const { token, phone: verifiedPhone } = await api.verifyPhoneOtp(phone, code);
+    const session = { token, phone: verifiedPhone };
+    window.localStorage.setItem(PHONE_SESSION_KEY, JSON.stringify(session));
+    setPhoneSession(session);
   }
 
   async function logout() {
-    if (!auth) return;
-    await signOut(auth);
+    if (phoneSession) {
+      window.localStorage.removeItem(PHONE_SESSION_KEY);
+      setPhoneSession(null);
+    }
+    if (auth && firebaseUser) {
+      await signOut(auth);
+    }
   }
 
   async function getIdToken() {
-    if (!auth?.currentUser) return null;
-    return auth.currentUser.getIdToken();
+    // Phone session takes precedence if both somehow exist — it's the more
+    // recently established one in that edge case.
+    if (phoneSession) return phoneSession.token;
+    if (auth?.currentUser) return auth.currentUser.getIdToken();
+    return null;
   }
 
-  // Phone sign-in gives a verified phoneNumber; Google gives displayName/email
-  // but never a phone. Either way this is just for pre-filling the checkout
-  // form — still fully editable there.
-  const profile = user
-    ? {
-        name: user.displayName || "",
-        phone: user.phoneNumber || "",
-        email: user.email || "",
-      }
-    : null;
+  const isLoggedIn = !!firebaseUser || !!phoneSession;
+  const profile = firebaseUser
+    ? { name: firebaseUser.displayName || "", phone: firebaseUser.phoneNumber || "", email: firebaseUser.email || "" }
+    : phoneSession
+      ? { name: "", phone: phoneSession.phone, email: "" }
+      : null;
 
   return (
     <CustomerAuthContext.Provider
       value={{
-        user,
+        user: firebaseUser,
         profile,
-        isLoggedIn: !!user,
+        isLoggedIn,
         loading,
         loginWithGoogle,
         sendOtp,

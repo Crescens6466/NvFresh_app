@@ -33,6 +33,19 @@ export default function Orders() {
     }
   }
 
+  // Only the admin can confirm a payment — never automatic, never
+  // customer-triggered. Verify the money actually arrived before clicking.
+  async function handleMarkPaid(id) {
+    if (!window.confirm("Confirm you've verified this payment in your UPI/bank account?")) return;
+    try {
+      await api.updatePaymentStatus(id, "Paid");
+      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, advance_payment_status: "Paid" } : o)));
+      showToast(`Order #${id} payment marked Paid`);
+    } catch (err) {
+      showToast(err.message || "Could not update payment status", "error");
+    }
+  }
+
   const filtered = filter === "All" ? orders : orders.filter((o) => o.status === filter);
 
   return (
@@ -70,9 +83,11 @@ export default function Orders() {
                 <th>Phone</th>
                 <th>Products</th>
                 <th>Amount</th>
-                <th>Advance Paid</th>
+                <th>Advance</th>
+                <th>Remaining</th>
                 <th>Transaction ID</th>
-                <th>Status</th>
+                <th>Payment Status</th>
+                <th>Fulfillment Status</th>
               </tr>
             </thead>
             <tbody>
@@ -94,8 +109,23 @@ export default function Orders() {
                     </ul>
                   </td>
                   <td>₹{o.total}</td>
-                  <td>₹{o.advance_paid}</td>
+                  <td>
+                    ₹{o.advance_paid}
+                    <br />
+                    <span className="orders-product-meta">({o.advance_percentage}%)</span>
+                  </td>
+                  <td>{o.remaining_amount === 0 ? "Fully paid" : `₹${o.remaining_amount}`}</td>
                   <td>{o.transaction_id}</td>
+                  <td>
+                    <span className={`payment-status-pill status-${o.advance_payment_status}`}>
+                      {o.advance_payment_status}
+                    </span>
+                    {o.advance_payment_status !== "Paid" && (
+                      <button className="btn btn-ghost orders-mark-paid-btn" onClick={() => handleMarkPaid(o.id)}>
+                        Mark Paid
+                      </button>
+                    )}
+                  </td>
                   <td>
                     <select
                       className={`status-select status-${o.status}`}

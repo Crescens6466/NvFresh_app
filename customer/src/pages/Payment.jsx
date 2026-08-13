@@ -4,16 +4,24 @@ import { HiArrowLeft, HiOutlineQrCode, HiOutlineTruck } from "react-icons/hi2";
 import { useCart } from "../context/CartContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
-import { api, resolveImageUrl } from "../api.js";
+import { api } from "../api.js";
 import "./Payment.css";
 
+const ADVANCE_OPTIONS = [25, 50, 75, 100];
+
 export default function Payment() {
-  const { items, subtotal, deliveryCharge, total, clearCart } = useCart();
+  const { items, clearCart } = useCart();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { profile, isLoggedIn, loading: authLoading, getIdToken } = useCustomerAuth();
 
   const [settings, setSettings] = useState(null);
+  const [advancePercentage, setAdvancePercentage] = useState(25);
+  // Every amount shown (total, advance, remaining) and the QR itself come
+  // from this — the backend recomputes totals from the database, never
+  // trusting a frontend-calculated number.
+  const [quote, setQuote] = useState(null);
+  const [quoteLoading, setQuoteLoading] = useState(true);
   // Pre-fill from a saved profile (faster checkout for returning customers) —
   // still fully editable.
   const [form, setForm] = useState({
@@ -23,8 +31,6 @@ export default function Payment() {
     transactionId: "",
   });
   const [submitting, setSubmitting] = useState(false);
-
-  const advance = Math.round(total * 0.25);
 
   useEffect(() => {
     if (items.length === 0) {
@@ -40,6 +46,36 @@ export default function Payment() {
     api.getSettings().then(setSettings).catch(() => {});
   }, [authLoading, isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Re-fetches the quote (totals + dynamic QR) whenever the advance % changes
+  // — this never creates or touches an order, so switching between
+  // 25/50/75/100% can't ever produce duplicate orders.
+  useEffect(() => {
+    if (items.length === 0 || authLoading || !isLoggedIn) return;
+    let cancelled = false;
+    setQuoteLoading(true);
+    getIdToken()
+      .then((token) =>
+        api.getOrderQuote(
+          items.map((i) => ({ productId: i.productId, weight: i.weight, quantity: i.quantity })),
+          advancePercentage,
+          token
+        )
+      )
+      .then((q) => {
+        if (!cancelled) setQuote(q);
+      })
+      .catch((err) => {
+        if (!cancelled) showToast(err.message || "Could not calculate payment amount", "error");
+      })
+      .finally(() => {
+        if (!cancelled) setQuoteLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [advancePercentage, authLoading, isLoggedIn, items.length]);
+
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
@@ -50,6 +86,10 @@ export default function Payment() {
       showToast("Please fill in all fields", "error");
       return;
     }
+    if (!quote) {
+      showToast("Please wait for the payment amount to load", "error");
+      return;
+    }
     setSubmitting(true);
     try {
       const token = await getIdToken();
@@ -58,11 +98,8 @@ export default function Payment() {
           customerName: form.name,
           phone: form.phone,
           address: form.address,
-          items,
-          subtotal,
-          deliveryCharge,
-          total,
-          advancePaid: advance,
+          items: items.map((i) => ({ productId: i.productId, weight: i.weight, quantity: i.quantity })),
+          advancePercentage,
           transactionId: form.transactionId,
         },
         token
@@ -76,6 +113,8 @@ export default function Payment() {
     }
   }
 
+  const isFullyPaid = advancePercentage === 100;
+
   return (
     <div className="payment page-fade">
       <div className="payment-header">
@@ -86,7 +125,7 @@ export default function Payment() {
       </div>
 
       <div className="payment-notice">
-        <p>Pay only 25% advance to confirm your order.</p>
+        <p>Pay a minimum of 25% advance to confirm your order — or pay more now, less on delivery.</p>
       </div>
 
       <div className="schedule-banner" style={{ marginBottom: 16 }}>
@@ -97,23 +136,54 @@ export default function Payment() {
       <div className="payment-amount-card">
         <div className="payment-amount-row">
           <span>Order Total</span>
-          <span>₹{total}</span>
+          <span>{quoteLoading && !quote ? "…" : `₹${quote?.total ?? 0}`}</span>
         </div>
+
+        <div className="payment-advance-select">
+          <p className="payment-advance-label">Choose Advance Payment</p>
+          <div className="payment-advance-chips">
+            {ADVANCE_OPTIONS.map((pct) => (
+              <button
+                key={pct}
+                type="button"
+                className={`payment-advance-chip ${advancePercentage === pct ? "is-active" : ""}`}
+                onClick={() => setAdvancePercentage(pct)}
+              >
+                {pct}%
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="payment-amount-row payment-amount-highlight">
-          <span>Advance Amount (25%)</span>
-          <span>₹{advance}</span>
+          <span>Advance Amount ({advancePercentage}%)</span>
+          <span>{quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`}</span>
         </div>
+        <div className="payment-amount-row">
+          <span>Remaining Amount</span>
+          <span>{quoteLoading ? "…" : `₹${quote?.remainingAmount ?? 0}`}</span>
+        </div>
+
+        {!quoteLoading && quote && (
+          <p className={`payment-remaining-note ${isFullyPaid ? "is-full" : ""}`}>
+            {isFullyPaid
+              ? "Fully paid — Nothing due on delivery"
+              : `₹${quote.remainingAmount} remaining — Pay on delivery`}
+          </p>
+        )}
       </div>
 
       <div className="payment-qr-card">
-        <div className={`payment-qr-box ${settings?.qr_image ? "has-image" : ""}`}>
-          {settings?.qr_image ? (
-            <img src={resolveImageUrl(settings.qr_image)} alt="Payment QR code" className="payment-qr-image" />
+        <div className={`payment-qr-box ${quote?.qrDataUrl ? "has-image" : ""}`}>
+          {quote?.qrDataUrl ? (
+            <img src={quote.qrDataUrl} alt="Payment QR code" className="payment-qr-image" />
           ) : (
             <HiOutlineQrCode />
           )}
         </div>
-        <p className="payment-qr-label">Scan to pay via any UPI app</p>
+        <p className="payment-qr-label">
+          Scan to pay {quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`} via any UPI app
+        </p>
         <p className="payment-upi">{settings?.upi_id || "nvfresh@upi"}</p>
         <p className="payment-phone">Or pay to: {settings?.phone_number || "+91 98765 43210"}</p>
       </div>
@@ -148,7 +218,7 @@ export default function Payment() {
           />
         </label>
 
-        <button className="btn btn-primary btn-block" type="submit" disabled={submitting}>
+        <button className="btn btn-primary btn-block" type="submit" disabled={submitting || quoteLoading}>
           {submitting ? "Placing Order..." : "Place Order"}
         </button>
       </form>
