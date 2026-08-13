@@ -1,5 +1,5 @@
 .pd {
-  padding-bottom: 90px;
+  padding-bottom: calc(var(--nav-height) + 100px);
 }
 
 .pd-image-wrap {
@@ -166,7 +166,7 @@
 
 .pd-action-bar {
   position: fixed;
-  bottom: 0;
+  bottom: var(--nav-height);
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
@@ -177,7 +177,8 @@
   padding: 10px 16px 12px;
   background: var(--card);
   border-top: 1px solid var(--border);
-  z-index: 60;
+  box-shadow: var(--shadow-lg);
+  z-index: 55;
 }
 
 .pd-action-total {
