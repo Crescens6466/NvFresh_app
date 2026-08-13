@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   HiOutlineUserCircle,
   HiOutlineClipboardDocumentList,
@@ -8,8 +8,11 @@ import {
   HiOutlinePhone,
   HiOutlineShieldCheck,
   HiOutlineDocumentText,
+  HiOutlineArrowRightOnRectangle,
   HiChevronRight,
 } from "react-icons/hi2";
+import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
+import { useToast } from "../context/ToastContext.jsx";
 import "./Profile.css";
 
 const LINKS = [
@@ -20,16 +23,45 @@ const LINKS = [
 ];
 
 export default function Profile() {
+  const navigate = useNavigate();
+  const { profile, isLoggedIn, logout } = useCustomerAuth();
+  const { showToast } = useToast();
+
+  function handleLogout() {
+    logout();
+    showToast("Signed out");
+  }
+
   return (
     <div className="profile page-fade">
-      <div className="profile-header">
+      <div
+        className={`profile-header ${isLoggedIn ? "" : "profile-header-guest"}`}
+        onClick={isLoggedIn ? undefined : () => navigate("/login")}
+        role={isLoggedIn ? undefined : "button"}
+      >
         <div className="profile-avatar">
           <HiOutlineUserCircle />
         </div>
-        <div>
-          <h3>Guest User</h3>
-          <p>Sign in to track your orders</p>
-        </div>
+        {isLoggedIn ? (
+          <div>
+            <h3>{profile.name}</h3>
+            <p>{profile.phone}</p>
+          </div>
+        ) : (
+          <div>
+            <h3>Guest User</h3>
+            <p>Sign in to track your orders</p>
+          </div>
+        )}
+        {isLoggedIn && (
+          <button
+            className="profile-logout"
+            onClick={handleLogout}
+            aria-label="Sign out"
+          >
+            <HiOutlineArrowRightOnRectangle />
+          </button>
+        )}
       </div>
 
       <div className="profile-quick">

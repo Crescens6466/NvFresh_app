@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { HiArrowLeft, HiOutlineQrCode, HiOutlineTruck } from "react-icons/hi2";
 import { useCart } from "../context/CartContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
+import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
 import { api, resolveImageUrl } from "../api.js";
 import "./Payment.css";
 
@@ -10,9 +11,18 @@ export default function Payment() {
   const { items, subtotal, deliveryCharge, total, clearCart } = useCart();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { profile } = useCustomerAuth();
 
   const [settings, setSettings] = useState(null);
-  const [form, setForm] = useState({ name: "", phone: "", address: "", transactionId: "" });
+  // Pre-fill from a saved profile (faster checkout for returning customers) —
+  // still fully editable, and guests who never logged in just get blank
+  // fields exactly as before.
+  const [form, setForm] = useState({
+    name: profile?.name || "",
+    phone: profile?.phone || "",
+    address: profile?.address || "",
+    transactionId: "",
+  });
   const [submitting, setSubmitting] = useState(false);
 
   const advance = Math.round(total * 0.25);

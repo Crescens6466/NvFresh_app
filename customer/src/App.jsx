@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import Header from "./components/Header.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import Home from "./pages/Home.jsx";
+import Login from "./pages/Login.jsx";
 import ProductDetails from "./pages/ProductDetails.jsx";
 import Cart from "./pages/Cart.jsx";
 import Payment from "./pages/Payment.jsx";
@@ -16,8 +17,8 @@ import OrderSuccess from "./pages/OrderSuccess.jsx";
 
 export default function App() {
   const location = useLocation();
-  // Payment & order-success get a focused flow without the bottom nav.
-  const hideNav = ["/payment", "/order-success"].includes(location.pathname);
+  // Payment, order-success & login get a focused flow without the bottom nav.
+  const hideNav = ["/payment", "/order-success", "/login"].includes(location.pathname);
 
   return (
     <div className="app-shell">
@@ -25,6 +26,7 @@ export default function App() {
       <main className="page-fade">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/payment" element={<Payment />} />

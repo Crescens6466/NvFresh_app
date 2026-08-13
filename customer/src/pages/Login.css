@@ -1,0 +1,9 @@
+.customer-login {
+  padding: 16px 16px 40px;
+}
+
+.customer-login-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}

@@ -13,6 +13,24 @@
   margin-bottom: 16px;
 }
 
+.profile-header-guest {
+  cursor: pointer;
+}
+
+.profile-logout {
+  margin-left: auto;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
 .profile-avatar {
   font-size: 3rem;
   display: flex;
