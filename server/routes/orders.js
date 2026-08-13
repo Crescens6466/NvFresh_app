@@ -51,7 +51,11 @@ router.post("/", async (req, res, next) => {
     const clientOrder = toClient(order);
 
     // Fire-and-forget — a notification failure should never block order placement.
-    sendOrderConfirmation(clientOrder);
+    // Customer confirmations are opt-in (need their own approved template) —
+    // set WHATSAPP_SEND_CUSTOMER_CONFIRMATION=true once that's set up too.
+    if (process.env.WHATSAPP_SEND_CUSTOMER_CONFIRMATION === "true") {
+      sendOrderConfirmation(clientOrder);
+    }
     Settings.findOne()
       .then((settings) => sendAdminOrderAlert(clientOrder, settings?.phone_number))
       .catch((err) => console.error(`[notify] Could not load Settings for admin alert:`, err.message));
