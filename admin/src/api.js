@@ -1,4 +1,4 @@
-// api.js — fetch wrapper for the admin app, attaches JWT automatically
+
 //
 // In local dev, Vite proxies "/api" to the server on :5000 (see vite.config.js).
 // In production (e.g. Vercel), there's no server behind the static build, so
