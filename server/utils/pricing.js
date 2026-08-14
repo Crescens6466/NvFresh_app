@@ -3,10 +3,9 @@
 // actually counts: totals are always recomputed here from the database,
 // never trusted from the frontend.
 import Product from "../models/Product.js";
+import Settings from "../models/Settings.js";
 
 const ADVANCE_PERCENTAGES = [25, 50, 75, 100];
-const FREE_DELIVERY_THRESHOLD = 500;
-const DELIVERY_CHARGE = 40;
 
 // Thrown for bad client input (invalid cart, unknown product) — routes
 // catch this specifically via instanceof and respond 400, vs. letting a
@@ -70,7 +69,9 @@ export async function computeOrderTotals(items) {
   });
 
   const subtotal = resolvedItems.reduce((sum, i) => sum + i.lineTotal, 0);
-  const deliveryCharge = subtotal > 0 && subtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_CHARGE : 0;
+  // Admin-controlled — set in the admin panel's Settings page, defaults to 0.
+  const settings = await Settings.findOne();
+  const deliveryCharge = subtotal > 0 ? settings?.delivery_charge ?? 0 : 0;
   const total = subtotal + deliveryCharge;
 
   return { resolvedItems, subtotal, deliveryCharge, total };

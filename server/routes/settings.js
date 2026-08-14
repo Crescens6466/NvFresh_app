@@ -25,13 +25,20 @@ router.get("/", async (req, res, next) => {
 // PUT /api/settings — admin only
 router.put("/", requireAuth, async (req, res, next) => {
   try {
-    const { businessName, phoneNumber, upiId, qrImage } = req.body;
+    const { businessName, phoneNumber, upiId, qrImage, deliveryCharge } = req.body;
     const existing = await getOrCreateSettings();
 
     if (businessName !== undefined) existing.business_name = businessName;
     if (phoneNumber !== undefined) existing.phone_number = phoneNumber;
     if (upiId !== undefined) existing.upi_id = upiId;
     if (qrImage !== undefined) existing.qr_image = qrImage;
+    if (deliveryCharge !== undefined) {
+      const charge = Number(deliveryCharge);
+      if (!Number.isFinite(charge) || charge < 0) {
+        return res.status(400).json({ error: "Delivery charge must be a non-negative number" });
+      }
+      existing.delivery_charge = charge;
+    }
 
     await existing.save();
     res.json(toClient(existing));

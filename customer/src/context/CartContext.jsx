@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { api } from "../api.js";
 
 const CartContext = createContext(null);
 
@@ -15,10 +16,21 @@ function loadCart() {
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState(loadCart);
+  // Admin-controlled — set in the admin panel's Settings page, defaults to 0.
+  // This is only for display before checkout; the backend recomputes the
+  // authoritative delivery charge from the same Settings document at order time.
+  const [deliveryChargeSetting, setDeliveryChargeSetting] = useState(0);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items]);
+
+  useEffect(() => {
+    api
+      .getSettings()
+      .then((s) => setDeliveryChargeSetting(s.delivery_charge ?? 0))
+      .catch(() => {});
+  }, []);
 
   // unitPrice is the price already scaled for the chosen weight (e.g. ₹110 for
   // "0.5 kg" of a ₹220/kg product) — computed by the caller via priceForWeight().
@@ -63,7 +75,7 @@ export function CartProvider({ children }) {
   }
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const deliveryCharge = subtotal > 0 && subtotal < 500 ? 40 : 0;
+  const deliveryCharge = subtotal > 0 ? deliveryChargeSetting : 0;
   const total = subtotal + deliveryCharge;
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 

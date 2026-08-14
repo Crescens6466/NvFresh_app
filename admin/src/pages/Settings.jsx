@@ -6,7 +6,13 @@ import "./Settings.css";
 
 export default function Settings() {
   const { showToast } = useToast();
-  const [form, setForm] = useState({ businessName: "", phoneNumber: "", upiId: "", qrImage: "" });
+  const [form, setForm] = useState({
+    businessName: "",
+    phoneNumber: "",
+    upiId: "",
+    qrImage: "",
+    deliveryCharge: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -20,6 +26,7 @@ export default function Settings() {
           phoneNumber: s.phone_number,
           upiId: s.upi_id,
           qrImage: s.qr_image || "",
+          deliveryCharge: s.delivery_charge ?? 0,
         })
       )
       .finally(() => setLoading(false));
@@ -81,6 +88,17 @@ export default function Settings() {
         <div className="field">
           <label>UPI ID</label>
           <input value={form.upiId} onChange={(e) => setForm({ ...form, upiId: e.target.value })} />
+        </div>
+
+        <div className="field">
+          <label>Delivery Charge (₹)</label>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={form.deliveryCharge}
+            onChange={(e) => setForm({ ...form, deliveryCharge: e.target.value })}
+          />
         </div>
 
         <div className="field">
