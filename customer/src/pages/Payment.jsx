@@ -174,17 +174,29 @@ export default function Payment() {
       </div>
 
       <div className="payment-qr-card">
-        <div className={`payment-qr-box ${quote?.qrDataUrl ? "has-image" : ""}`}>
+        <a
+          className={`payment-qr-box ${quote?.qrDataUrl ? "has-image" : ""} ${quote?.upiUrl ? "is-tappable" : ""}`}
+          href={quote?.upiUrl || undefined}
+          aria-disabled={!quote?.upiUrl}
+          onClick={(e) => { if (!quote?.upiUrl) e.preventDefault(); }}
+        >
           {quote?.qrDataUrl ? (
             <img src={quote.qrDataUrl} alt="Payment QR code" className="payment-qr-image" />
           ) : (
             <HiOutlineQrCode />
           )}
-        </div>
+        </a>
         <p className="payment-qr-label">
           Scan to pay {quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`} via any UPI app
         </p>
-        <p className="payment-upi">{settings?.upi_id || "nvfresh@upi"}</p>
+        {quote?.upiUrl ? (
+          <a className="payment-upi payment-upi-link" href={quote.upiUrl}>
+            {settings?.upi_id || "nvfresh@upi"}
+            <span className="payment-upi-hint">Tap to pay in your UPI app</span>
+          </a>
+        ) : (
+          <p className="payment-upi">{settings?.upi_id || "nvfresh@upi"}</p>
+        )}
         <p className="payment-phone">Or pay to: {settings?.phone_number || "+91 98765 43210"}</p>
       </div>
 
