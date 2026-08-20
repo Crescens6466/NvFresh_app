@@ -6,8 +6,8 @@ import { api } from "../api.js";
 const CustomerAuthContext = createContext(null);
 
 // Phone sign-in doesn't use Firebase at all (avoids its paid-billing
-// requirement for SMS) — the backend sends an OTP via WhatsApp and, once
-// verified, issues its own session token. That session lives here,
+// requirement for SMS) — the backend sends an OTP via SMS (SMSGate) and,
+// once verified, issues its own session token. That session lives here,
 // independent of Firebase's onAuthStateChanged (which only tracks Google).
 const PHONE_SESSION_KEY = "nvfresh_phone_session";
 

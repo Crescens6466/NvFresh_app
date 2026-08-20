@@ -34,7 +34,7 @@ export default function Login() {
     try {
       await sendOtp(phone);
       setOtpSent(true);
-      showToast("OTP sent via WhatsApp");
+      showToast("OTP sent via SMS");
     } catch (err) {
       showToast(err.message || "Could not send OTP", "error");
     } finally {
@@ -109,13 +109,13 @@ export default function Login() {
             />
           </label>
           <button className="btn btn-primary btn-block" type="submit" disabled={sending}>
-            {sending ? "Sending OTP..." : "Send OTP via WhatsApp"}
+            {sending ? "Sending OTP..." : "Send OTP via SMS"}
           </button>
         </form>
       ) : (
         <form className="payment-form" onSubmit={handleVerifyOtp}>
           <label>
-            Enter OTP (sent via WhatsApp)
+            Enter OTP (sent via SMS)
             <input
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
