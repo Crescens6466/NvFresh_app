@@ -1,9 +1,11 @@
-// utils/notify.js — sends order-related and OTP messages via WhatsApp (Meta
-// Cloud API). Order/admin notifications are best-effort (never block the
-// caller); OTP delivery is not — the customer is waiting on it, so
-// sendOtpWhatsApp() throws on failure instead of swallowing it.
+// utils/notify.js — sends order/admin notifications via WhatsApp (Meta
+// Cloud API). All best-effort — a failure here must never block order
+// placement or a status update (see sendWhatsAppTemplate below). OTP
+// delivery is handled separately, via SMS — see utils/smsgate.js.
 
-const WHATSAPP_API_VERSION = "v20.0";
+function apiVersion() {
+  return process.env.WHATSAPP_API_VERSION || "v20.0";
+}
 
 function normalizePhone(phone) {
   // Meta expects the number with country code, no "+", no spaces.
@@ -15,15 +17,21 @@ function normalizePhone(phone) {
 
 // All of these are business-initiated messages, so WhatsApp requires a
 // pre-approved template for each (create + approve these in Meta Business
-// Manager first — see README).
+// Manager first — see README). Returns the Meta message id on success, so
+// callers can record it for notification-history/duplicate-audit purposes.
 async function sendWhatsAppMessage({ to, templateName, templateLang, parameters }) {
+  // Lets the app run without real WhatsApp credentials (e.g. local dev) —
+  // defaults to enabled so production behavior is unchanged when unset.
+  if (process.env.WHATSAPP_ENABLED === "false") {
+    throw new Error("WhatsApp is not configured");
+  }
   const { WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID } = process.env;
   if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
     throw new Error("WhatsApp is not configured");
   }
 
   const recipient = normalizePhone(to);
-  const url = `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  const url = `https://graph.facebook.com/${apiVersion()}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
   const body = {
     messaging_product: "whatsapp",
     to: recipient,
@@ -51,27 +59,34 @@ async function sendWhatsAppMessage({ to, templateName, templateLang, parameters 
   if (!res.ok) {
     throw new Error(`WhatsApp send failed: ${await res.text()}`);
   }
-  return recipient;
+  const data = await res.json();
+  return { recipient, messageId: data?.messages?.[0]?.id || null };
 }
 
 // Best-effort variant for order notifications — never throws, since a
 // failure here should never block order placement or status updates.
-async function sendWhatsAppTemplate({ to, templateName, templateLang, parameters, logLabel }) {
+// Returns { type, success, messageId, sentAt, error? } so callers can push
+// it onto Order.whatsapp_notifications as a durable send record.
+async function sendWhatsAppTemplate({ type, to, templateName, templateLang, parameters, logLabel }) {
+  const sentAt = new Date();
   try {
-    const recipient = await sendWhatsAppMessage({ to, templateName, templateLang, parameters });
+    const { recipient, messageId } = await sendWhatsAppMessage({ to, templateName, templateLang, parameters });
     console.log(`[notify] ${logLabel} sent to ${recipient}`);
+    return { type, success: true, messageId, sentAt };
   } catch (err) {
     if (err.message === "WhatsApp is not configured") {
       console.log(`[notify] WhatsApp not configured — skipping ${logLabel}`);
     } else {
       console.error(`[notify] ${logLabel} failed:`, err.message);
     }
+    return { type, success: false, messageId: null, sentAt, error: err.message };
   }
 }
 
 export function sendOrderConfirmation(order) {
   const { WHATSAPP_TEMPLATE_NAME = "order_confirmation", WHATSAPP_TEMPLATE_LANG = "en" } = process.env;
   return sendWhatsAppTemplate({
+    type: "order_received",
     to: order.phone,
     templateName: WHATSAPP_TEMPLATE_NAME,
     templateLang: WHATSAPP_TEMPLATE_LANG,
@@ -93,6 +108,7 @@ export function sendAdminOrderAlert(order, adminPhone) {
     WHATSAPP_ADMIN_TEMPLATE_LANG = "en",
   } = process.env;
   return sendWhatsAppTemplate({
+    type: "admin_new_order",
     to: adminPhone,
     templateName: WHATSAPP_ADMIN_TEMPLATE_NAME,
     templateLang: WHATSAPP_ADMIN_TEMPLATE_LANG,
@@ -101,15 +117,62 @@ export function sendAdminOrderAlert(order, adminPhone) {
   });
 }
 
-// Customer phone-login OTP — the customer is actively waiting on this, so
-// unlike the notifications above, failure here must be surfaced (thrown),
-// not swallowed.
-export async function sendOtpWhatsApp(phone, code) {
-  const { WHATSAPP_OTP_TEMPLATE_NAME = "customer_otp", WHATSAPP_OTP_TEMPLATE_LANG = "en" } = process.env;
-  await sendWhatsAppMessage({
-    to: phone,
-    templateName: WHATSAPP_OTP_TEMPLATE_NAME,
-    templateLang: WHATSAPP_OTP_TEMPLATE_LANG,
-    parameters: [code],
+export function sendPaymentConfirmedNotification(order) {
+  const {
+    WHATSAPP_PAYMENT_CONFIRMED_TEMPLATE_NAME = "payment_confirmed",
+    WHATSAPP_PAYMENT_CONFIRMED_TEMPLATE_LANG = "en",
+  } = process.env;
+  return sendWhatsAppTemplate({
+    type: "payment_confirmed",
+    to: order.phone,
+    templateName: WHATSAPP_PAYMENT_CONFIRMED_TEMPLATE_NAME,
+    templateLang: WHATSAPP_PAYMENT_CONFIRMED_TEMPLATE_LANG,
+    parameters: [`Rs.${order.advance_paid}`, String(order.id)],
+    logLabel: `payment confirmed notification for order #${order.id}`,
+  });
+}
+
+export function sendOrderPreparingNotification(order) {
+  const {
+    WHATSAPP_PREPARING_TEMPLATE_NAME = "order_preparing",
+    WHATSAPP_PREPARING_TEMPLATE_LANG = "en",
+  } = process.env;
+  return sendWhatsAppTemplate({
+    type: "order_preparing",
+    to: order.phone,
+    templateName: WHATSAPP_PREPARING_TEMPLATE_NAME,
+    templateLang: WHATSAPP_PREPARING_TEMPLATE_LANG,
+    parameters: [String(order.id)],
+    logLabel: `preparing notification for order #${order.id}`,
+  });
+}
+
+export function sendOrderDeliveredNotification(order) {
+  const {
+    WHATSAPP_DELIVERED_TEMPLATE_NAME = "order_delivered",
+    WHATSAPP_DELIVERED_TEMPLATE_LANG = "en",
+  } = process.env;
+  return sendWhatsAppTemplate({
+    type: "order_delivered",
+    to: order.phone,
+    templateName: WHATSAPP_DELIVERED_TEMPLATE_NAME,
+    templateLang: WHATSAPP_DELIVERED_TEMPLATE_LANG,
+    parameters: [String(order.id)],
+    logLabel: `delivered notification for order #${order.id}`,
+  });
+}
+
+export function sendOrderCancelledNotification(order) {
+  const {
+    WHATSAPP_CANCELLED_TEMPLATE_NAME = "order_cancelled",
+    WHATSAPP_CANCELLED_TEMPLATE_LANG = "en",
+  } = process.env;
+  return sendWhatsAppTemplate({
+    type: "order_cancelled",
+    to: order.phone,
+    templateName: WHATSAPP_CANCELLED_TEMPLATE_NAME,
+    templateLang: WHATSAPP_CANCELLED_TEMPLATE_LANG,
+    parameters: [String(order.id), order.cancellation_reason || "Not specified"],
+    logLabel: `cancellation notification for order #${order.id}`,
   });
 }

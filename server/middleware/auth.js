@@ -1,7 +1,7 @@
 // middleware/auth.js — simple JWT auth guard for admin routes
 import jwt from "jsonwebtoken";
 
-export const JWT_SECRET = "nvfresh_dev_secret_change_in_production";
+export const JWT_SECRET = process.env.JWT_SECRET || "nvfresh_dev_secret_change_in_production";
 
 export function requireAuth(req, res, next) {
   const header = req.headers.authorization;

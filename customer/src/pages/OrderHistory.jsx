@@ -53,6 +53,9 @@ export default function OrderHistory() {
                   <span className={`order-status-pill order-status-${o.status}`}>{o.status}</span>
                 </span>
               </div>
+              {o.status === "Cancelled" && o.cancellation_reason && (
+                <p className="order-history-cancel-reason">Reason: {o.cancellation_reason}</p>
+              )}
               <ul className="order-history-items">
                 {o.items.map((item, i) => (
                   <li key={i}>

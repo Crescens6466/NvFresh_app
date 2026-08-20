@@ -47,6 +47,24 @@ const orderSchema = new mongoose.Schema(
       enum: ["Pending", "Preparing", "Delivered", "Cancelled"],
       default: "Pending",
     },
+    // Only set when status is "Cancelled" — shown to the customer in the
+    // cancellation WhatsApp message and in My Orders.
+    cancellation_reason: { type: String, default: "" },
+    // Durable record of every WhatsApp send attempt for this order (success
+    // and failure alike). Exists so admins can see what was actually sent —
+    // the actual duplicate-prevention guard is the oldStatus/newStatus
+    // comparison in routes/orders.js, not this array.
+    whatsapp_notifications: {
+      type: [
+        {
+          type: { type: String, required: true },
+          status: { type: String, enum: ["sent", "failed"], required: true },
+          sentAt: { type: Date, required: true },
+          messageId: { type: String, default: null },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: { createdAt: "created_at", updatedAt: false } }
 );

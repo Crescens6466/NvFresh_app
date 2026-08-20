@@ -63,8 +63,8 @@ export const api = {
   deleteProduct: (id) => request(`/products/${id}`, { method: "DELETE" }),
 
   getOrders: () => request(`/orders`),
-  updateOrderStatus: (id, status) =>
-    request(`/orders/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) }),
+  updateOrderStatus: (id, status, reason) =>
+    request(`/orders/${id}/status`, { method: "PUT", body: JSON.stringify({ status, reason }) }),
   updatePaymentStatus: (id, status) =>
     request(`/orders/${id}/payment-status`, { method: "PUT", body: JSON.stringify({ status }) }),
 

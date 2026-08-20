@@ -24,9 +24,16 @@ export default function Orders() {
   useEffect(loadOrders, []);
 
   async function handleStatusChange(id, status) {
+    let reason;
+    if (status === "Cancelled") {
+      reason = window.prompt("Reason for cancelling this order (shown to the customer):");
+      if (reason === null) return; // admin backed out of the prompt
+    }
     try {
-      await api.updateOrderStatus(id, status);
-      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+      await api.updateOrderStatus(id, status, reason);
+      setOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status, cancellation_reason: reason ?? o.cancellation_reason } : o))
+      );
       showToast(`Order #${id} marked ${status}`);
     } catch (err) {
       showToast(err.message || "Could not update status", "error");
@@ -138,6 +145,9 @@ export default function Orders() {
                         </option>
                       ))}
                     </select>
+                    {o.status === "Cancelled" && o.cancellation_reason && (
+                      <p className="orders-cancellation-reason">{o.cancellation_reason}</p>
+                    )}
                   </td>
                 </tr>
               ))}

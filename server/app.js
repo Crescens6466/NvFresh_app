@@ -21,6 +21,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
+// Trust Vercel's proxy so req.ip reflects the real client IP (used for
+// OTP request rate limiting) instead of the proxy's own address.
+app.set("trust proxy", true);
+
 app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

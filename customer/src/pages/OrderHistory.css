@@ -77,6 +77,12 @@
   color: #2E7D32;
 }
 
+.order-history-cancel-reason {
+  font-size: 0.78rem;
+  color: #C62828;
+  margin: 0 0 8px;
+}
+
 .order-history-items {
   list-style: none;
   font-size: 0.82rem;

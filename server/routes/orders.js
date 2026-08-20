@@ -5,7 +5,14 @@ import Customer from "../models/Customer.js";
 import Settings from "../models/Settings.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireCustomerAuth } from "../middleware/customerAuth.js";
-import { sendOrderConfirmation, sendAdminOrderAlert } from "../utils/notify.js";
+import {
+  sendOrderConfirmation,
+  sendAdminOrderAlert,
+  sendPaymentConfirmedNotification,
+  sendOrderPreparingNotification,
+  sendOrderDeliveredNotification,
+  sendOrderCancelledNotification,
+} from "../utils/notify.js";
 import { toClient, toClientList } from "../utils/serialize.js";
 import {
   computeOrderTotals,
@@ -16,6 +23,30 @@ import {
 import { buildUpiUrl, generateQrDataUrl } from "../utils/upiPayment.js";
 
 const router = express.Router();
+
+// Fires a notifier (any of the sendXWhatsApp functions above, which never
+// throw — see notify.js) and, once it resolves, records the attempt onto
+// Order.whatsapp_notifications. Runs detached from the request/response
+// cycle — a slow or failed WhatsApp send must never delay or fail the HTTP
+// response for an order/status/payment change.
+function notifyAndRecord(orderId, notifierPromise) {
+  if (!notifierPromise) return;
+  notifierPromise
+    .then((record) => {
+      if (!record) return;
+      return Order.findByIdAndUpdate(orderId, {
+        $push: {
+          whatsapp_notifications: {
+            type: record.type,
+            status: record.success ? "sent" : "failed",
+            sentAt: record.sentAt,
+            messageId: record.messageId,
+          },
+        },
+      });
+    })
+    .catch((err) => console.error("[orders] Could not record WhatsApp notification:", err.message));
+}
 
 // POST /api/orders/quote — live preview of totals + a dynamic QR for the
 // selected advance %. Never writes to the database — switching between
@@ -117,10 +148,10 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
     // Customer confirmations are opt-in (need their own approved template) —
     // set WHATSAPP_SEND_CUSTOMER_CONFIRMATION=true once that's set up too.
     if (process.env.WHATSAPP_SEND_CUSTOMER_CONFIRMATION === "true") {
-      sendOrderConfirmation(clientOrder);
+      notifyAndRecord(order._id, sendOrderConfirmation(clientOrder));
     }
     Settings.findOne()
-      .then((settings) => sendAdminOrderAlert(clientOrder, settings?.phone_number))
+      .then((settings) => notifyAndRecord(order._id, sendAdminOrderAlert(clientOrder, settings?.phone_number)))
       .catch((err) => console.error(`[notify] Could not load Settings for admin alert:`, err.message));
 
     res.status(201).json(clientOrder);
@@ -165,17 +196,42 @@ router.get("/:id", requireAuth, async (req, res, next) => {
   }
 });
 
-// PUT /api/orders/:id/status — update fulfillment status (admin only)
+// PUT /api/orders/:id/status — update fulfillment status (admin only).
+// A WhatsApp notification only fires on a genuine status transition — e.g.
+// re-selecting "Preparing" when it's already "Preparing" is a no-op and
+// sends nothing.
 router.put("/:id/status", requireAuth, async (req, res, next) => {
   try {
-    const { status } = req.body;
+    const { status, reason } = req.body;
     const allowed = ["Pending", "Preparing", "Delivered", "Cancelled"];
     if (!allowed.includes(status)) {
       return res.status(400).json({ error: "Invalid status" });
     }
-    const order = await Order.findByIdAndUpdate(req.params.id, { status }, { new: true });
-    if (!order) return res.status(404).json({ error: "Order not found" });
-    res.json(toClient(order));
+
+    const existing = await Order.findById(req.params.id);
+    if (!existing) return res.status(404).json({ error: "Order not found" });
+
+    const statusChanged = existing.status !== status;
+    existing.status = status;
+    if (status === "Cancelled" && reason) {
+      existing.cancellation_reason = reason;
+    }
+    await existing.save();
+
+    const clientOrder = toClient(existing);
+    res.json(clientOrder);
+
+    if (statusChanged) {
+      if (status === "Preparing") {
+        notifyAndRecord(existing._id, sendOrderPreparingNotification(clientOrder));
+      } else if (status === "Delivered") {
+        notifyAndRecord(existing._id, sendOrderDeliveredNotification(clientOrder));
+      } else if (status === "Cancelled") {
+        notifyAndRecord(existing._id, sendOrderCancelledNotification(clientOrder));
+      }
+      // "Pending" has no notification of its own — the order-received
+      // message already went out when the order was created.
+    }
   } catch (err) {
     if (err.name === "CastError") return res.status(404).json({ error: "Order not found" });
     next(err);
@@ -192,9 +248,20 @@ router.put("/:id/payment-status", requireAuth, async (req, res, next) => {
     if (!allowed.includes(status)) {
       return res.status(400).json({ error: "Invalid payment status" });
     }
-    const order = await Order.findByIdAndUpdate(req.params.id, { advance_payment_status: status }, { new: true });
-    if (!order) return res.status(404).json({ error: "Order not found" });
-    res.json(toClient(order));
+
+    const existing = await Order.findById(req.params.id);
+    if (!existing) return res.status(404).json({ error: "Order not found" });
+
+    const becamePaid = existing.advance_payment_status !== "Paid" && status === "Paid";
+    existing.advance_payment_status = status;
+    await existing.save();
+
+    const clientOrder = toClient(existing);
+    res.json(clientOrder);
+
+    if (becamePaid) {
+      notifyAndRecord(existing._id, sendPaymentConfirmedNotification(clientOrder));
+    }
   } catch (err) {
     if (err.name === "CastError") return res.status(404).json({ error: "Order not found" });
     next(err);

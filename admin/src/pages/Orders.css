@@ -116,3 +116,10 @@
   padding: 5px 10px;
   font-size: 0.72rem;
 }
+
+.orders-cancellation-reason {
+  margin: 6px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  max-width: 180px;
+}
