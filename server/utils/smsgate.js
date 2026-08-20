@@ -46,6 +46,12 @@ export async function sendOtpSms(phone, code) {
     body: JSON.stringify({
       textMessage: { text: `Your NvFresh login code is ${code}. Valid for 5 minutes. Do not share it with anyone.` },
       phoneNumbers: [normalizePhone(phone)],
+      // Pinned explicitly — this device has 2 SIM slots, and slot 2's radio
+      // is deactivated (RESULT_ERROR_RADIO_OFF). Without this, SMSGate's
+      // auto-selection intermittently picks slot 2 and every other send
+      // fails. Slot 1 is the confirmed-working SIM; override via env if
+      // that ever changes (e.g. the SIMs get swapped).
+      simNumber: Number(process.env.SMSGATE_SIM_NUMBER) || 1,
     }),
   });
 
