@@ -1,0 +1,71 @@
+// AppHeader.jsx — ported from customer/src/components/Header.jsx: brand
+// logo/tagline plus a cart icon with a badge, always visible above screens
+// (like the web app's sticky header).
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useCart } from "../context/CartContext.jsx";
+import { navigate } from "../navigation/navigationRef.js";
+import { colors, radius, spacing } from "../theme.js";
+
+export default function AppHeader() {
+  const { itemCount } = useCart();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+      <View style={styles.spacer} />
+      <TouchableOpacity
+        style={styles.brand}
+        onPress={() => navigate("Main", { screen: "Home" })}
+      >
+        <Text style={styles.logo}>NvFresh</Text>
+        <Text style={styles.tagline}>Fresh Meat Delivered. Hygienic. Healthy. Trusted.</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.cartButton}
+        onPress={() => navigate("Main", { screen: "Cart" })}
+        accessibilityLabel="Open cart"
+      >
+        <Ionicons name="bag-outline" size={22} color={colors.text} />
+        {itemCount > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{itemCount}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  spacer: { width: 34 },
+  brand: { flex: 1, alignItems: "center" },
+  logo: { fontSize: 20, fontWeight: "800", color: colors.primary },
+  tagline: { fontSize: 10, color: colors.textMuted, marginTop: 2, textAlign: "center" },
+  cartButton: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
+  badge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: { color: colors.white, fontSize: 10, fontWeight: "700" },
+});
