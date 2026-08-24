@@ -46,3 +46,31 @@ export const spacing = {
   lg: 16,
   xl: 24,
 };
+
+// Gradients — mirror customer/src/index.css's --gradient-primary / --gradient-accent,
+// consumed via expo-linear-gradient's `colors` prop.
+export const gradients = {
+  primary: [colors.primary, colors.secondary],
+  accent: ["#FFB300", "#FF8A00"],
+};
+
+// Typography — Baloo 2 (display: headings, logo, prices — matches the
+// website's --font-display) and Inter (body — matches --font-body).
+// Font files are loaded via useFonts() in App.js under these exact names;
+// fall back to platform defaults until they're ready (see App.js).
+export const typography = {
+  display: {
+    regular: "Baloo2_400Regular",
+    medium: "Baloo2_500Medium",
+    semibold: "Baloo2_600SemiBold",
+    bold: "Baloo2_700Bold",
+    extrabold: "Baloo2_800ExtraBold",
+  },
+  body: {
+    regular: "Inter_400Regular",
+    medium: "Inter_500Medium",
+    semibold: "Inter_600SemiBold",
+    bold: "Inter_700Bold",
+    extrabold: "Inter_800ExtraBold",
+  },
+};

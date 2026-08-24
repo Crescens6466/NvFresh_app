@@ -6,7 +6,7 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { colors, spacing } from "../theme.js";
+import { colors, spacing, typography } from "../theme.js";
 
 export default function ScreenHeader({ title }) {
   const navigation = useNavigation();
@@ -27,5 +27,5 @@ export default function ScreenHeader({ title }) {
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", padding: spacing.lg, gap: spacing.md },
   back: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 18, fontWeight: "800", color: colors.text },
+  title: { fontSize: 18, fontFamily: typography.display.extrabold, color: colors.text },
 });

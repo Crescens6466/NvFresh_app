@@ -1,7 +1,7 @@
 // EmptyState.jsx — ported from the web app's repeated ".empty-state" blocks.
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, spacing } from "../theme.js";
+import { colors, spacing, typography } from "../theme.js";
 
 export default function EmptyState({ icon, title, message, children }) {
   return (
@@ -16,6 +16,6 @@ export default function EmptyState({ icon, title, message, children }) {
 
 const styles = StyleSheet.create({
   wrap: { alignItems: "center", justifyContent: "center", paddingVertical: 64, paddingHorizontal: spacing.xl },
-  title: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing.md },
+  title: { fontSize: 16, fontFamily: typography.display.bold, color: colors.text, marginTop: spacing.md },
   message: { fontSize: 13, color: colors.textMuted, textAlign: "center", marginTop: spacing.xs },
 });

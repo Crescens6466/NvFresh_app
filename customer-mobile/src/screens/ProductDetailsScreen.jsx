@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Picker } from "@react-native-picker/picker";
 import { useNavigation } from "@react-navigation/native";
 import { api, resolveImageUrl } from "../api.js";
 import { useCart } from "../context/CartContext.jsx";
@@ -11,7 +10,8 @@ import { priceForWeight } from "../utils.js";
 import { Skeleton } from "../components/Skeleton.jsx";
 import ScreenHeader from "../components/ScreenHeader.jsx";
 import Button from "../components/Button.jsx";
-import { colors, radius, spacing } from "../theme.js";
+import WeightSelector from "../components/WeightSelector.jsx";
+import { colors, radius, spacing, typography } from "../theme.js";
 
 const BENEFITS = [
   { icon: "sparkles-outline", label: "Freshly Cut" },
@@ -102,13 +102,7 @@ export default function ProductDetailsScreen({ route }) {
           <View style={styles.row}>
             <View style={styles.field}>
               <Text style={styles.label}>Weight</Text>
-              <View style={styles.pickerWrap}>
-                <Picker selectedValue={weight} onValueChange={setWeight}>
-                  {product.weights.map((w) => (
-                    <Picker.Item key={w} label={w} value={w} />
-                  ))}
-                </Picker>
-              </View>
+              <WeightSelector options={product.weights} value={weight} onChange={setWeight} />
             </View>
             <View style={styles.field}>
               <Text style={styles.label}>Quantity</Text>
@@ -191,16 +185,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  badgeText: { color: colors.white, fontSize: 11, fontWeight: "700" },
+  badgeText: { color: colors.white, fontSize: 11, fontFamily: typography.body.bold },
   body: { padding: spacing.lg },
-  name: { fontSize: 20, fontWeight: "800", color: colors.text },
-  price: { fontSize: 18, fontWeight: "800", color: colors.primary, marginTop: 6 },
-  unit: { fontSize: 12, fontWeight: "500", color: colors.textMuted },
+  name: { fontSize: 20, fontFamily: typography.display.extrabold, color: colors.text },
+  price: { fontSize: 20, fontFamily: typography.display.bold, color: colors.primary, marginTop: 6 },
+  unit: { fontSize: 12, fontFamily: typography.body.medium, color: colors.textMuted },
   desc: { fontSize: 13, color: colors.textMuted, marginTop: spacing.md, lineHeight: 19 },
   row: { flexDirection: "row", gap: spacing.md, marginTop: spacing.lg },
   field: { flex: 1 },
-  label: { fontSize: 12, fontWeight: "700", color: colors.textMuted, marginBottom: 6 },
-  pickerWrap: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, overflow: "hidden" },
+  label: { fontSize: 12, fontFamily: typography.body.bold, color: colors.textMuted, marginBottom: 6 },
   qtyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -212,10 +205,10 @@ const styles = StyleSheet.create({
     height: 44,
   },
   qtyBtn: { padding: 4 },
-  qtyText: { fontSize: 15, fontWeight: "700", color: colors.text },
+  qtyText: { fontSize: 15, fontFamily: typography.body.bold, color: colors.text },
   benefits: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginTop: spacing.lg },
   benefit: { alignItems: "center", width: "22%", gap: 4 },
-  benefitLabel: { fontSize: 10, color: colors.textMuted, textAlign: "center", fontWeight: "600" },
+  benefitLabel: { fontSize: 10, color: colors.textMuted, textAlign: "center", fontFamily: typography.body.semibold },
   infoCard: {
     backgroundColor: colors.card,
     borderRadius: radius.md,
@@ -224,7 +217,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  infoTitle: { fontSize: 13, fontWeight: "700", color: colors.text, marginBottom: 4 },
+  infoTitle: { fontSize: 13, fontFamily: typography.body.bold, color: colors.text, marginBottom: 4 },
   infoText: { fontSize: 12, color: colors.textMuted, lineHeight: 18 },
   actionBar: {
     position: "absolute",
@@ -241,6 +234,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   actionLabel: { fontSize: 11, color: colors.textMuted },
-  actionTotal: { fontSize: 18, fontWeight: "800", color: colors.text },
+  actionTotal: { fontSize: 18, fontFamily: typography.display.bold, color: colors.text },
   actionButtons: { flexDirection: "row", gap: spacing.sm, flex: 1, marginLeft: spacing.md },
 });

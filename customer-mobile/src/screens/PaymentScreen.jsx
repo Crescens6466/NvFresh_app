@@ -9,7 +9,7 @@ import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
 import { api } from "../api.js";
 import ScreenHeader from "../components/ScreenHeader.jsx";
 import Button from "../components/Button.jsx";
-import { colors, radius, shadow, spacing } from "../theme.js";
+import { colors, radius, shadow, spacing, typography } from "../theme.js";
 
 const ADVANCE_OPTIONS = [25, 50, 75, 100];
 
@@ -223,26 +223,26 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6 },
   rowHighlight: { marginTop: spacing.sm },
   rowLabel: { fontSize: 13, color: colors.textMuted },
-  rowValue: { fontSize: 13, fontWeight: "700", color: colors.text },
-  rowValueBig: { fontSize: 16, fontWeight: "800", color: colors.primary },
-  chipLabel: { fontSize: 12, fontWeight: "700", color: colors.textMuted, marginTop: spacing.md, marginBottom: spacing.sm },
+  rowValue: { fontSize: 13, fontFamily: typography.body.bold, color: colors.text },
+  rowValueBig: { fontSize: 17, fontFamily: typography.display.bold, color: colors.primary },
+  chipLabel: { fontSize: 12, fontFamily: typography.body.bold, color: colors.textMuted, marginTop: spacing.md, marginBottom: spacing.sm },
   chipRow: { flexDirection: "row", gap: spacing.sm },
   chip: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingVertical: 8, alignItems: "center" },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { fontSize: 13, fontWeight: "700", color: colors.text },
+  chipText: { fontSize: 13, fontFamily: typography.body.bold, color: colors.text },
   chipTextActive: { color: colors.white },
-  remainingNote: { fontSize: 12, fontWeight: "700", color: colors.primary, marginTop: spacing.sm, textAlign: "center" },
+  remainingNote: { fontSize: 12, fontFamily: typography.body.bold, color: colors.primary, marginTop: spacing.sm, textAlign: "center" },
   remainingNoteFull: { color: colors.success },
   qrCard: { backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.lg, marginTop: spacing.lg, alignItems: "center", ...shadow.sm },
   qrBox: { width: 180, height: 180, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   qrImage: { width: "100%", height: "100%" },
   qrLabel: { fontSize: 12, color: colors.textMuted, marginTop: spacing.md, textAlign: "center" },
-  upiLink: { fontSize: 14, fontWeight: "800", color: colors.primary, marginTop: spacing.sm, textAlign: "center" },
+  upiLink: { fontSize: 14, fontFamily: typography.display.bold, color: colors.primary, marginTop: spacing.sm, textAlign: "center" },
   upiHint: { fontSize: 11, color: colors.textMuted, textAlign: "center" },
   phone: { fontSize: 12, color: colors.textMuted, marginTop: spacing.sm },
   formCard: { backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.lg, marginTop: spacing.lg, ...shadow.sm },
-  formTitle: { fontSize: 15, fontWeight: "800", color: colors.text, marginBottom: spacing.md },
-  label: { fontSize: 12, fontWeight: "700", color: colors.textMuted, marginBottom: 6, marginTop: spacing.sm },
+  formTitle: { fontSize: 15, fontFamily: typography.display.bold, color: colors.text, marginBottom: spacing.md },
+  label: { fontSize: 12, fontFamily: typography.body.bold, color: colors.textMuted, marginBottom: 6, marginTop: spacing.sm },
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: spacing.md, height: 46, fontSize: 14, color: colors.text },
   textarea: { height: 80, paddingTop: 10, textAlignVertical: "top" },
 });

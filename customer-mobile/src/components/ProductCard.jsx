@@ -1,14 +1,14 @@
 // ProductCard.jsx — ported from customer/src/components/ProductCard.jsx.
 import React, { useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useCart } from "../context/CartContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { priceForWeight } from "../utils.js";
 import { resolveImageUrl } from "../api.js";
-import { colors, radius, shadow, spacing } from "../theme.js";
+import WeightSelector from "./WeightSelector.jsx";
+import { colors, radius, shadow, spacing, typography } from "../theme.js";
 
 const BADGE_COLOR = {
   "Best Seller": colors.accent,
@@ -66,13 +66,7 @@ export default function ProductCard({ product }) {
           ₹{displayPrice} <Text style={styles.unit}>/ {weight}</Text>
         </Text>
 
-        <View style={styles.pickerWrap}>
-          <Picker selectedValue={weight} onValueChange={setWeight} style={styles.picker}>
-            {product.weights.map((w) => (
-              <Picker.Item key={w} label={w} value={w} />
-            ))}
-          </Picker>
-        </View>
+        <WeightSelector options={product.weights} value={weight} onChange={setWeight} size="sm" />
 
         <View style={styles.actions}>
           <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={handleAdd}>
@@ -105,7 +99,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  badgeText: { color: colors.white, fontSize: 10, fontWeight: "700" },
+  badgeText: { color: colors.white, fontFamily: typography.body.bold, fontSize: 10 },
   wishlist: {
     position: "absolute",
     top: spacing.sm,
@@ -117,22 +111,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  body: { padding: spacing.md },
-  name: { fontSize: 14, fontWeight: "700", color: colors.text },
-  price: { fontSize: 15, fontWeight: "800", color: colors.primary, marginTop: 4 },
-  unit: { fontSize: 11, fontWeight: "500", color: colors.textMuted },
-  pickerWrap: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    marginTop: spacing.sm,
-    overflow: "hidden",
-  },
-  picker: { height: 40 },
-  actions: { flexDirection: "row", gap: 8, marginTop: spacing.sm },
-  btn: { flex: 1, paddingVertical: 8, borderRadius: radius.sm, alignItems: "center" },
-  btnOutline: { borderWidth: 1, borderColor: colors.primary },
-  btnOutlineText: { color: colors.primary, fontWeight: "700", fontSize: 12 },
-  btnPrimary: { backgroundColor: colors.primary },
-  btnPrimaryText: { color: colors.white, fontWeight: "700", fontSize: 12 },
+  body: { padding: spacing.md, gap: 6 },
+  name: { fontSize: 14, fontFamily: typography.body.bold, color: colors.text },
+  price: { fontFamily: typography.display.bold, fontSize: 16, color: colors.primary, marginTop: 2 },
+  unit: { fontSize: 11, fontFamily: typography.body.medium, color: colors.textMuted },
+  actions: { flexDirection: "row", gap: 8, marginTop: 2 },
+  btn: { flex: 1, paddingVertical: 9, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  btnOutline: { borderWidth: 1.5, borderColor: colors.primary },
+  btnOutlineText: { color: colors.primary, fontFamily: typography.body.bold, fontSize: 12 },
+  btnPrimary: { backgroundColor: colors.primary, ...shadow.sm },
+  btnPrimaryText: { color: colors.white, fontFamily: typography.body.bold, fontSize: 12 },
 });

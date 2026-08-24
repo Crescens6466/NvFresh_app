@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
-import { colors, radius, shadow, spacing } from "../theme.js";
+import { colors, radius, shadow, spacing, typography } from "../theme.js";
 
 const LINKS = [
   { screen: "About", label: "About Us", icon: "information-circle-outline" },
@@ -94,13 +94,13 @@ const styles = StyleSheet.create({
   center: { alignItems: "center", justifyContent: "center" },
   header: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.lg, ...shadow.sm },
   avatar: { width: 56, height: 56, borderRadius: radius.pill, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" },
-  name: { fontSize: 16, fontWeight: "800", color: colors.text },
+  name: { fontSize: 16, fontFamily: typography.display.bold, color: colors.text },
   sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   quickRow: { flexDirection: "row", gap: spacing.md, marginTop: spacing.lg },
   quickItem: { flex: 1, alignItems: "center", gap: 6, backgroundColor: colors.card, borderRadius: radius.md, paddingVertical: spacing.lg, ...shadow.sm },
-  quickLabel: { fontSize: 12, fontWeight: "600", color: colors.text },
+  quickLabel: { fontSize: 12, fontFamily: typography.body.semibold, color: colors.text },
   links: { marginTop: spacing.lg, backgroundColor: colors.card, borderRadius: radius.md, ...shadow.sm },
   link: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
-  linkLabel: { flex: 1, fontSize: 14, fontWeight: "600", color: colors.text },
+  linkLabel: { flex: 1, fontSize: 14, fontFamily: typography.body.semibold, color: colors.text },
   version: { textAlign: "center", fontSize: 11, color: colors.textMuted, marginTop: spacing.xl },
 });

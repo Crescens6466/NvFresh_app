@@ -8,7 +8,7 @@ import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
 import { resolveImageUrl } from "../api.js";
 import EmptyState from "../components/EmptyState.jsx";
 import Button from "../components/Button.jsx";
-import { colors, radius, shadow, spacing } from "../theme.js";
+import { colors, radius, shadow, spacing, typography } from "../theme.js";
 
 export default function CartScreen() {
   const { items, updateQuantity, removeFromCart, subtotal, deliveryCharge, total } = useCart();
@@ -102,7 +102,7 @@ export default function CartScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  title: { fontSize: 20, fontWeight: "800", color: colors.text, marginBottom: spacing.lg },
+  title: { fontSize: 20, fontFamily: typography.display.extrabold, color: colors.text, marginBottom: spacing.lg },
   item: {
     flexDirection: "row",
     alignItems: "center",
@@ -115,9 +115,9 @@ const styles = StyleSheet.create({
   },
   itemImage: { width: 56, height: 56, borderRadius: radius.sm, backgroundColor: colors.border },
   itemInfo: { flex: 1 },
-  itemName: { fontSize: 14, fontWeight: "700", color: colors.text },
+  itemName: { fontSize: 14, fontFamily: typography.body.bold, color: colors.text },
   itemWeight: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-  itemPrice: { fontSize: 13, fontWeight: "700", color: colors.primary, marginTop: 4 },
+  itemPrice: { fontSize: 14, fontFamily: typography.display.bold, color: colors.primary, marginTop: 4 },
   itemActions: { alignItems: "flex-end", gap: spacing.sm },
   stepper: {
     flexDirection: "row",
@@ -130,17 +130,17 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   stepBtn: { padding: 4 },
-  stepText: { fontSize: 13, fontWeight: "700", color: colors.text, minWidth: 16, textAlign: "center" },
+  stepText: { fontSize: 13, fontFamily: typography.body.bold, color: colors.text, minWidth: 16, textAlign: "center" },
   summary: { backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.lg, marginTop: spacing.sm, ...shadow.sm },
-  summaryTitle: { fontSize: 15, fontWeight: "800", color: colors.text, marginBottom: spacing.md },
+  summaryTitle: { fontSize: 15, fontFamily: typography.display.bold, color: colors.text, marginBottom: spacing.md },
   summaryRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
   summaryLabel: { fontSize: 13, color: colors.textMuted },
-  summaryValue: { fontSize: 13, color: colors.text, fontWeight: "600" },
+  summaryValue: { fontSize: 13, color: colors.text, fontFamily: typography.body.semibold },
   summaryDivider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.sm },
-  summaryTotalLabel: { fontSize: 15, fontWeight: "800", color: colors.text },
-  summaryTotalValue: { fontSize: 15, fontWeight: "800", color: colors.primary },
+  summaryTotalLabel: { fontSize: 15, fontFamily: typography.display.bold, color: colors.text },
+  summaryTotalValue: { fontSize: 16, fontFamily: typography.display.bold, color: colors.primary },
   banner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FFF1EC", padding: spacing.md, borderRadius: radius.md, marginTop: spacing.md },
-  bannerText: { flex: 1, fontSize: 11, color: colors.primaryDark, fontWeight: "600" },
+  bannerText: { flex: 1, fontSize: 11, color: colors.primaryDark, fontFamily: typography.body.semibold },
   checkoutBar: {
     position: "absolute",
     bottom: 0,
@@ -155,5 +155,5 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   checkoutLabel: { fontSize: 11, color: colors.textMuted },
-  checkoutTotal: { fontSize: 18, fontWeight: "800", color: colors.text },
+  checkoutTotal: { fontSize: 19, fontFamily: typography.display.extrabold, color: colors.text },
 });

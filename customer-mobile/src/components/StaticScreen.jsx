@@ -4,7 +4,7 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import ScreenHeader from "./ScreenHeader.jsx";
-import { colors, spacing } from "../theme.js";
+import { colors, spacing, typography } from "../theme.js";
 
 export default function StaticScreen({ title, intro, sections }) {
   return (
@@ -27,6 +27,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   body: { padding: spacing.lg, paddingTop: 0 },
   section: { marginTop: spacing.lg },
-  heading: { fontSize: 14, fontWeight: "800", color: colors.text, marginBottom: 6 },
+  heading: { fontSize: 14, fontFamily: typography.display.bold, color: colors.text, marginBottom: 6 },
   paragraph: { fontSize: 13, color: colors.textMuted, lineHeight: 20 },
 });

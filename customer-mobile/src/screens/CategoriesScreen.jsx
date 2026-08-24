@@ -4,7 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { api } from "../api.js";
 import { navigate } from "../navigation/navigationRef.js";
-import { colors, radius, shadow, spacing } from "../theme.js";
+import { colors, radius, shadow, spacing, typography } from "../theme.js";
 
 const CATS = [
   { name: "Chicken", icon: "food-drumstick", color: "#EF5350" },
@@ -51,7 +51,7 @@ export default function CategoriesScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg, padding: spacing.lg },
-  title: { fontSize: 20, fontWeight: "800", color: colors.text, marginBottom: spacing.lg },
+  title: { fontSize: 20, fontFamily: typography.display.extrabold, color: colors.text, marginBottom: spacing.lg },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   card: {
     width: "47%",
@@ -69,6 +69,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: spacing.sm,
   },
-  cardTitle: { fontSize: 14, fontWeight: "700", color: colors.text, textAlign: "center" },
+  cardTitle: { fontSize: 14, fontFamily: typography.body.bold, color: colors.text, textAlign: "center" },
   cardCount: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
 });

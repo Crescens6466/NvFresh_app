@@ -7,7 +7,7 @@ import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import ScreenHeader from "../components/ScreenHeader.jsx";
 import Button from "../components/Button.jsx";
-import { colors, radius, spacing } from "../theme.js";
+import { colors, radius, spacing, typography } from "../theme.js";
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -139,8 +139,8 @@ const styles = StyleSheet.create({
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
   divider: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  dividerText: { color: colors.textMuted, fontSize: 12, fontWeight: "600" },
-  label: { fontSize: 12, fontWeight: "700", color: colors.textMuted, marginBottom: 6 },
+  dividerText: { color: colors.textMuted, fontSize: 12, fontFamily: typography.body.semibold },
+  label: { fontSize: 12, fontFamily: typography.body.bold, color: colors.textMuted, marginBottom: 6 },
   input: {
     borderWidth: 1,
     borderColor: colors.border,

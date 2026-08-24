@@ -4,8 +4,9 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../context/CartContext.jsx";
-import { colors } from "../theme.js";
+import { colors, typography } from "../theme.js";
 import HomeScreen from "../screens/HomeScreen.jsx";
 import CategoriesScreen from "../screens/CategoriesScreen.jsx";
 import CartScreen from "../screens/CartScreen.jsx";
@@ -36,6 +37,7 @@ function TabIcon({ route, focused, itemCount }) {
 
 export default function MainTabs() {
   const { itemCount } = useCart();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
@@ -44,8 +46,16 @@ export default function MainTabs() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarIcon: ({ focused }) => <TabIcon route={route} focused={focused} itemCount={itemCount} />,
-        tabBarStyle: { borderTopColor: colors.border, height: 60, paddingBottom: 8, paddingTop: 6 },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        // Custom height opts the tab bar out of react-navigation's automatic
+        // safe-area padding, so we add it back manually — otherwise the bar
+        // sits under the Android gesture/3-button nav area.
+        tabBarStyle: {
+          borderTopColor: colors.border,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom + 8,
+          paddingTop: 6,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontFamily: typography.body.semibold },
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
@@ -70,5 +80,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 2,
   },
-  dotText: { color: colors.white, fontSize: 9, fontWeight: "700" },
+  dotText: { color: colors.white, fontSize: 9, fontFamily: typography.body.bold },
 });

@@ -6,7 +6,7 @@ import { api } from "../api.js";
 import ProductCard from "../components/ProductCard.jsx";
 import { ProductGridSkeleton } from "../components/Skeleton.jsx";
 import EmptyState from "../components/EmptyState.jsx";
-import { colors, radius, shadow, spacing } from "../theme.js";
+import { colors, radius, shadow, spacing, typography } from "../theme.js";
 
 const CATEGORIES = ["All", "Chicken", "Mutton", "Fish", "Seafood", "Country Chicken"];
 
@@ -37,6 +37,7 @@ export default function HomeScreen({ route }) {
   const ListHeader = (
     <View>
       <View style={styles.hero}>
+        <View style={styles.heroGlow} />
         <Text style={styles.eyebrow}>Weekly delivery, every Sunday</Text>
         <Text style={styles.heroTitle}>Fresh Meat Delivered To Your Doorstep</Text>
         <Text style={styles.heroDesc}>
@@ -55,15 +56,15 @@ export default function HomeScreen({ route }) {
         </View>
         <View style={styles.strip}>
           <View style={styles.stripItem}>
-            <Ionicons name="sparkles-outline" size={16} color={colors.primary} />
+            <Ionicons name="sparkles-outline" size={14} color="#fff" />
             <Text style={styles.stripText}>Freshly Cut</Text>
           </View>
           <View style={styles.stripItem}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={colors.primary} />
+            <Ionicons name="shield-checkmark-outline" size={14} color="#fff" />
             <Text style={styles.stripText}>Hygienic Pack</Text>
           </View>
           <View style={styles.stripItem}>
-            <Ionicons name="car-outline" size={16} color={colors.primary} />
+            <Ionicons name="car-outline" size={14} color="#fff" />
             <Text style={styles.stripText}>Sunday Delivery</Text>
           </View>
         </View>
@@ -125,48 +126,74 @@ export default function HomeScreen({ route }) {
 }
 
 const styles = StyleSheet.create({
-  hero: { padding: spacing.lg },
-  eyebrow: { color: colors.primary, fontWeight: "700", fontSize: 12, marginBottom: 6 },
-  heroTitle: { fontSize: 24, fontWeight: "800", color: colors.text, lineHeight: 30 },
-  heroDesc: { fontSize: 13, color: colors.textMuted, marginTop: 8, lineHeight: 19 },
+  hero: {
+    padding: spacing.lg,
+    paddingTop: spacing.xl,
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
+    overflow: "hidden",
+    backgroundColor: colors.primary,
+  },
+  heroGlow: {
+    position: "absolute",
+    right: -40,
+    bottom: -60,
+    width: 180,
+    height: 180,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  eyebrow: { color: "#FFE1B3", fontFamily: typography.body.bold, fontSize: 12, letterSpacing: 0.6, textTransform: "uppercase" },
+  heroTitle: { fontSize: 24, fontFamily: typography.display.extrabold, color: "#fff", marginTop: 8, lineHeight: 30, maxWidth: 280 },
+  heroDesc: { fontSize: 13, fontFamily: typography.body.regular, color: "rgba(255,255,255,0.92)", marginTop: 8, lineHeight: 19, maxWidth: 320 },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.card,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingVertical: 12,
     marginTop: spacing.lg,
     gap: 8,
-    ...shadow.sm,
+    ...shadow.md,
   },
-  searchInput: { flex: 1, color: colors.text, fontSize: 14 },
-  strip: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.lg },
-  stripItem: { alignItems: "center", gap: 4 },
-  stripText: { fontSize: 11, color: colors.textMuted, fontWeight: "600" },
+  searchInput: { flex: 1, fontFamily: typography.body.regular, color: colors.text, fontSize: 14 },
+  strip: { flexDirection: "row", gap: 10, marginTop: spacing.lg },
+  stripItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
+  stripText: { fontSize: 11, fontFamily: typography.body.semibold, color: "#fff" },
   scheduleBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#FFF1EC",
+    backgroundColor: "#FFF3CD",
     marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
     padding: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
   },
-  scheduleText: { flex: 1, fontSize: 12, color: colors.primaryDark, fontWeight: "600" },
+  scheduleText: { flex: 1, fontSize: 12, fontFamily: typography.body.semibold, color: "#8A5A00" },
   chipRow: { marginTop: spacing.lg, marginBottom: spacing.md },
   chip: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    backgroundColor: colors.card,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
     fontSize: 13,
-    fontWeight: "600",
-    color: colors.text,
+    fontFamily: typography.body.semibold,
+    color: colors.textMuted,
     overflow: "hidden",
   },
-  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary, color: colors.white },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary, color: "#fff", ...shadow.sm },
   featuredHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -174,6 +201,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
-  featuredTitle: { fontSize: 16, fontWeight: "800", color: colors.text },
-  featuredCount: { fontSize: 12, color: colors.textMuted },
+  featuredTitle: { fontSize: 17, fontFamily: typography.display.bold, color: colors.text },
+  featuredCount: { fontSize: 12, fontFamily: typography.body.medium, color: colors.textMuted },
 });

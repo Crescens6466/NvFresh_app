@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import Button from "../components/Button.jsx";
-import { colors, spacing } from "../theme.js";
+import { colors, spacing, typography } from "../theme.js";
 
 export default function OrderSuccessScreen() {
   const navigation = useNavigation();
@@ -29,6 +29,6 @@ export default function OrderSuccessScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center", padding: spacing.xl },
-  title: { fontSize: 22, fontWeight: "800", color: colors.text, marginTop: spacing.lg },
+  title: { fontSize: 22, fontFamily: typography.display.extrabold, color: colors.text, marginTop: spacing.lg },
   message: { fontSize: 13, color: colors.textMuted, textAlign: "center", marginTop: spacing.md, lineHeight: 19 },
 });

@@ -8,7 +8,7 @@ import { api } from "../api.js";
 import { Skeleton } from "../components/Skeleton.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import ScreenHeader from "../components/ScreenHeader.jsx";
-import { colors, radius, shadow, spacing } from "../theme.js";
+import { colors, radius, shadow, spacing, typography } from "../theme.js";
 
 const STATUS_COLORS = {
   Pending: colors.accent,
@@ -95,13 +95,13 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   card: { backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.lg, ...shadow.sm },
   top: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  id: { fontSize: 13, fontWeight: "700", color: colors.text },
+  id: { fontSize: 13, fontFamily: typography.body.bold, color: colors.text },
   pills: { flexDirection: "row", gap: 6 },
-  pill: { fontSize: 10, fontWeight: "700", borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3, overflow: "hidden" },
+  pill: { fontSize: 10, fontFamily: typography.body.bold, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3, overflow: "hidden" },
   cancelReason: { fontSize: 12, color: colors.primary, marginTop: spacing.sm },
   itemLine: { fontSize: 12, color: colors.textMuted, marginTop: 6 },
   bottom: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
-  bottomText: { fontSize: 12, fontWeight: "600", color: colors.text },
-  remaining: { fontSize: 12, fontWeight: "700", color: colors.primary, marginTop: spacing.sm },
+  bottomText: { fontSize: 12, fontFamily: typography.body.semibold, color: colors.text },
+  remaining: { fontSize: 12, fontFamily: typography.body.bold, color: colors.primary, marginTop: spacing.sm },
   remainingFull: { color: colors.success },
 });

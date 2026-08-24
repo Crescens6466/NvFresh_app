@@ -7,7 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../context/CartContext.jsx";
 import { navigate } from "../navigation/navigationRef.js";
-import { colors, radius, spacing } from "../theme.js";
+import { colors, radius, spacing, typography } from "../theme.js";
 
 export default function AppHeader() {
   const { itemCount } = useCart();
@@ -52,8 +52,8 @@ const styles = StyleSheet.create({
   },
   spacer: { width: 34 },
   brand: { flex: 1, alignItems: "center" },
-  logo: { fontSize: 20, fontWeight: "800", color: colors.primary },
-  tagline: { fontSize: 10, color: colors.textMuted, marginTop: 2, textAlign: "center" },
+  logo: { fontSize: 22, fontFamily: typography.display.extrabold, color: colors.primary, letterSpacing: 0.2 },
+  tagline: { fontSize: 10, fontFamily: typography.body.medium, color: colors.textMuted, marginTop: 2, textAlign: "center" },
   cartButton: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
   badge: {
     position: "absolute",
@@ -67,5 +67,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 3,
   },
-  badgeText: { color: colors.white, fontSize: 10, fontWeight: "700" },
+  badgeText: { color: colors.white, fontSize: 10, fontFamily: typography.body.bold },
 });
