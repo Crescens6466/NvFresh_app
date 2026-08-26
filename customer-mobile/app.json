@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "customer-mobile",
-    "slug": "nvfresh",
+    "name": "NvFresh",
+    "slug": "valet0727",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -23,15 +23,12 @@
     },
     "plugins": [
       "expo-web-browser",
-      "expo-font",
-      "expo-router",
-      "expo-status-bar"
+      "expo-font"
     ],
     "extra": {
       "eas": {
-        "projectId": "61895ae7-9db1-4905-acc2-c2638ffd1219"
+        "projectId": "51c3004b-0d59-4396-8ad9-a4146e208f74"
       }
-    },
-    "owner": "nvfreshs-team"
+    }
   }
 }
