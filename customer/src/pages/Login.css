@@ -35,3 +35,10 @@
   height: 1px;
   background: var(--border);
 }
+
+.customer-login-resend-message {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}

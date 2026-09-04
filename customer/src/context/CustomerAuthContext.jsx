@@ -2,13 +2,13 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider } from "../firebase.js";
 import { api } from "../api.js";
+import { retryMsg91Otp, sendMsg91Otp, verifyMsg91Otp } from "../services/msg91Otp.js";
 
 const CustomerAuthContext = createContext(null);
 
-// Phone sign-in doesn't use Firebase at all (avoids its paid-billing
-// requirement for SMS) — the backend sends an OTP via SMS (SMSGate) and,
-// once verified, issues its own session token. That session lives here,
-// independent of Firebase's onAuthStateChanged (which only tracks Google).
+// Phone sign-in doesn't use Firebase. The website uses MSG91's Custom UI SDK,
+// then exchanges its verified access token for the same NvFresh session JWT
+// used by the legacy mobile SMSGate flow.
 const PHONE_SESSION_KEY = "nvfresh_phone_session";
 
 function loadPhoneSession() {
@@ -46,11 +46,18 @@ export function CustomerAuthProvider({ children }) {
   }
 
   async function sendOtp(phone) {
-    await api.sendPhoneOtp(phone);
+    await sendMsg91Otp(phone);
+  }
+
+  async function retryOtp() {
+    await retryMsg91Otp();
   }
 
   async function verifyOtp(phone, code) {
-    const { token, phone: verifiedPhone } = await api.verifyPhoneOtp(phone, code);
+    // The server verifies the MSG91 access token before issuing this JWT; the
+    // supplied phone is intentionally not trusted for the session identity.
+    const msg91AccessToken = await verifyMsg91Otp(code);
+    const { token, phone: verifiedPhone } = await api.exchangeMsg91AccessToken(msg91AccessToken);
     const session = { token, phone: verifiedPhone };
     window.localStorage.setItem(PHONE_SESSION_KEY, JSON.stringify(session));
     setPhoneSession(session);
@@ -90,6 +97,7 @@ export function CustomerAuthProvider({ children }) {
         loading,
         loginWithGoogle,
         sendOtp,
+        retryOtp,
         verifyOtp,
         logout,
         getIdToken,

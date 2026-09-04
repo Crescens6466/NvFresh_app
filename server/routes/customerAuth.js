@@ -13,6 +13,7 @@ import crypto from "crypto";
 import PhoneOtp from "../models/PhoneOtp.js";
 import { bumpRateLimit } from "../models/OtpRateLimit.js";
 import { sendOtpSms } from "../utils/smsgate.js";
+import { verifyMsg91AccessToken } from "../utils/msg91.js";
 
 const router = express.Router();
 
@@ -137,6 +138,36 @@ router.post("/verify-otp", async (req, res, next) => {
     const token = jwt.sign({ uid, phone: digits }, CUSTOMER_JWT_SECRET, { expiresIn: "30d" });
     res.json({ token, uid, phone: digits });
   } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/customer-auth/msg91-exchange
+// Website-only MSG91 path. Legacy SMSGate endpoints above remain unchanged
+// for the customer mobile app.
+router.post("/msg91-exchange", async (req, res, next) => {
+  try {
+    const accessToken = typeof req.body.accessToken === "string" ? req.body.accessToken.trim() : "";
+    if (!accessToken || accessToken.length > 10_000) {
+      return res.status(400).json({ error: "Could not verify phone number" });
+    }
+
+    const verifiedPhone = await verifyMsg91AccessToken(accessToken);
+    const digits = normalizeDigits(verifiedPhone);
+    if (digits.length !== 10) {
+      return res.status(401).json({ error: "Could not verify phone number" });
+    }
+
+    const uid = `phone:${digits}`;
+    const token = jwt.sign({ uid, phone: digits }, CUSTOMER_JWT_SECRET, { expiresIn: "30d" });
+    res.json({ token, uid, phone: digits });
+  } catch (err) {
+    if (err.message === "MSG91 is not configured") {
+      return res.status(503).json({ error: "Phone sign-in is unavailable right now — please try again shortly" });
+    }
+    if (err.message === "MSG91 access token verification failed") {
+      return res.status(401).json({ error: "Could not verify phone number" });
+    }
     next(err);
   }
 });

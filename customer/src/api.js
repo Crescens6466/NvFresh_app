@@ -64,4 +64,9 @@ export const api = {
     request(`/customer-auth/send-otp`, { method: "POST", body: JSON.stringify({ phone }) }),
   verifyPhoneOtp: (phone, code) =>
     request(`/customer-auth/verify-otp`, { method: "POST", body: JSON.stringify({ phone, code }) }),
+  exchangeMsg91AccessToken: (accessToken) =>
+    request(`/customer-auth/msg91-exchange`, {
+      method: "POST",
+      body: JSON.stringify({ accessToken }),
+    }),
 };
