@@ -59,7 +59,7 @@ export default function App() {
           </CustomerAuthProvider>
         </ToastProvider>
       </CartProvider>
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
     </SafeAreaProvider>
   );
 }
