@@ -33,7 +33,7 @@ export default function Home() {
     <div>
       {/* Hero */}
       <section className="hero">
-        <span className="eyebrow hero-eyebrow">Weekly delivery, every Sunday</span>
+        <div className="hero-eyebrow">Weekly delivery, every Sunday</div>
         <h2 className="hero-title">Fresh Meat Delivered To Your Doorstep</h2>
         <p className="hero-desc">
           We deliver hygienically processed fresh chicken, mutton, fish and seafood

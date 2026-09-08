@@ -59,7 +59,7 @@
 
 .order-status-Cancelled {
   background: #FFEBEE;
-  color: #C62828;
+  color: var(--primary-red);
 }
 
 .payment-status-Pending {
@@ -79,7 +79,7 @@
 
 .order-history-cancel-reason {
   font-size: 0.78rem;
-  color: #C62828;
+  color: var(--primary-red);
   margin: 0 0 8px;
 }
 

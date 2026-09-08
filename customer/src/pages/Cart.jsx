@@ -94,7 +94,7 @@ export default function Cart() {
           <p className="cart-checkout-label">Total</p>
           <p className="cart-checkout-total">₹{total}</p>
         </div>
-        <button className="btn btn-primary" onClick={handleCheckout}>
+        <button className="btn btn-primary cart-checkout-button" onClick={handleCheckout}>
           Checkout
         </button>
       </div>

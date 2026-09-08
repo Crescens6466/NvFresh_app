@@ -1,5 +1,5 @@
 // LoginScreen.jsx — ported from customer/src/pages/Login.jsx.
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -12,7 +12,7 @@ import { colors, radius, spacing, typography } from "../theme.js";
 export default function LoginScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { loginWithGoogle, sendOtp, verifyOtp } = useCustomerAuth();
+  const { loginWithGoogle, sendOtp, retryOtp, verifyOtp } = useCustomerAuth();
   const { showToast } = useToast();
 
   const [phone, setPhone] = useState("");
@@ -21,6 +21,20 @@ export default function LoginScreen() {
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(15);
+  const [resendAttempts, setResendAttempts] = useState(0);
+
+  const resendLimitReached = resendAttempts >= 3;
+
+  useEffect(() => {
+    if (!otpSent || resendLimitReached || resendCountdown <= 0) return;
+
+    const timer = setTimeout(() => {
+      setResendCountdown((current) => current - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [otpSent, resendLimitReached, resendCountdown]);
 
   function afterLogin() {
     showToast("Signed in successfully");
@@ -30,17 +44,38 @@ export default function LoginScreen() {
   }
 
   async function handleSendOtp() {
+    if (sending) return;
     if (!/^\d{10}$/.test(phone.replace(/\D/g, ""))) {
       showToast("Enter a valid 10-digit mobile number", "error");
       return;
     }
+
     setSending(true);
     try {
       await sendOtp(phone);
       setOtpSent(true);
+      setResendAttempts(0);
+      setResendCountdown(15);
       showToast("OTP sent via SMS");
     } catch (err) {
       showToast(err.message || "Could not send OTP", "error");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleResendOtp() {
+    if (sending || resendLimitReached || resendCountdown > 0) return;
+
+    setSending(true);
+    try {
+      await retryOtp();
+      const nextAttempts = resendAttempts + 1;
+      setResendAttempts(nextAttempts);
+      setResendCountdown(15);
+      showToast("OTP resent via SMS");
+    } catch (err) {
+      showToast(err.message || "Could not resend OTP", "error");
     } finally {
       setSending(false);
     }
@@ -73,6 +108,12 @@ export default function LoginScreen() {
       setGoogleLoading(false);
     }
   }
+
+  const resendButtonTitle = resendLimitReached
+    ? "Resend limit reached. Please request a new OTP by changing the number."
+    : resendCountdown > 0
+      ? `Resend OTP in ${resendCountdown}s`
+      : "Resend OTP";
 
   return (
     <View style={styles.screen}>
@@ -126,7 +167,24 @@ export default function LoginScreen() {
             maxLength={6}
           />
           <Button title={verifying ? "Verifying..." : "Verify OTP"} onPress={handleVerifyOtp} disabled={verifying} style={{ marginTop: spacing.md }} />
-          <Button title="Change number" variant="ghost" onPress={() => setOtpSent(false)} style={{ marginTop: spacing.sm }} />
+          <Button
+            title={resendButtonTitle}
+            variant={resendLimitReached ? "ghost" : "outline"}
+            onPress={handleResendOtp}
+            disabled={sending || resendCountdown > 0 || resendLimitReached}
+            style={{ marginTop: spacing.sm }}
+          />
+          <Button
+            title="Change number"
+            variant="ghost"
+            onPress={() => {
+              setOtpSent(false);
+              setOtp("");
+              setResendAttempts(0);
+              setResendCountdown(15);
+            }}
+            style={{ marginTop: spacing.sm }}
+          />
         </View>
       )}
     </View>

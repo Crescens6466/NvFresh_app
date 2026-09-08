@@ -1,0 +1,33 @@
+{
+  "project_info": {
+    "project_number": "725533349098",
+    "project_id": "nvfresh-da6d8",
+    "storage_bucket": "nvfresh-da6d8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:725533349098:web:d536197e176c00a160f393",
+        "android_client_info": {
+          "package_name": "com.nvfresh.customer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "725533349098-s259ftv4rljkpe61v536fg3k649bspsq.apps.googleusercontent.com",
+          "client_type": 1
+        },
+        {
+          "client_id": "725533349098-2t144i5kjg9n4rdr1p0ojbfgtcpkhn93.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCbpY8Pl4To2Jc1xaECOJBUtuD3p2cjLMk"
+        }
+      ],
+      "services": {}
+    }
+  ]
+}

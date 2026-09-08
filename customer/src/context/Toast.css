@@ -29,7 +29,7 @@
 }
 
 .toast--error {
-  background: #C62828;
+  background: var(--primary-red);
 }
 
 @keyframes toast-in {

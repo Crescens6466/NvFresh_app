@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "NvFresh",
-    "slug": "valet0727",
+    "slug": "nvfresh",
+    "scheme": "nvfresh",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -22,13 +23,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser",
+      "@react-native-google-signin/google-signin",
       "expo-font",
       "expo-status-bar"
     ],
     "extra": {
       "eas": {
-        "projectId": "51c3004b-0d59-4396-8ad9-a4146e208f74"
+        "projectId": "97e85c69-5459-4b7b-9fa4-eb6468695a7d"
       }
     }
   }

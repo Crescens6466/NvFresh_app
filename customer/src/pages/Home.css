@@ -1,9 +1,7 @@
 .hero {
-  padding: 22px 18px 18px;
-  background:
-    radial-gradient(120% 100% at 100% 0%, rgba(255, 179, 0, 0.12), transparent 60%),
-    var(--gradient-primary);
-  border-radius: 0 0 28px 28px;
+  padding: 24px 16px 16px;
+  background: var(--primary-red);
+  border-radius: 0 0 24px 24px;
   color: #fff;
   position: relative;
   overflow: hidden;
@@ -22,14 +20,19 @@
 
 .hero-eyebrow {
   color: #FFE1B3;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
 }
 
 .hero-title {
-  font-size: 1.55rem;
+  font-size: 24px;
   font-weight: 800;
   margin-top: 8px;
   max-width: 280px;
   color: #fff;
+  line-height: 30px;
 }
 
 .hero-desc {
@@ -110,7 +113,7 @@
 }
 
 .category-chip.is-active {
-  background: var(--gradient-primary);
+  background: var(--primary-red);
   color: #fff;
   border-color: transparent;
   box-shadow: var(--shadow-sm);

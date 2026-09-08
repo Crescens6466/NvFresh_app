@@ -51,7 +51,7 @@ export default function ProductCard({ product }) {
           }}
           aria-label="Toggle wishlist"
         >
-          {liked ? <HiHeart color="#C62828" /> : <HiOutlineHeart />}
+          {liked ? <HiHeart color="var(--primary-red)" /> : <HiOutlineHeart />}
         </button>
       </div>
 

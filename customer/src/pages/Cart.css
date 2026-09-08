@@ -159,3 +159,26 @@
   font-weight: 800;
   color: var(--primary);
 }
+
+.cart-checkout-bar .cart-checkout-button {
+  width: 160px;
+  gap: 8px;
+  padding: 14px 22px;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: normal;
+  background: var(--primary);
+  color: #fff;
+  border: 0;
+  box-shadow: var(--shadow-md);
+}
+
+.cart-checkout-bar .cart-checkout-button:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.cart-checkout-bar .cart-checkout-button:active {
+  opacity: 0.85;
+  transform: none;
+}
