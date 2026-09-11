@@ -53,6 +53,14 @@ async function request(path, options = {}) {
 export const api = {
   login: (username, password) =>
     request(`/auth/login`, { method: "POST", body: JSON.stringify({ username, password }) }),
+  registerFcmToken: (token) =>
+    request(`/admin-notifications/fcm-token`, { method: "POST", body: JSON.stringify({ token }) }),
+  removeFcmToken: (token) =>
+    request(`/admin-notifications/fcm-token`, { method: "DELETE", body: JSON.stringify({ token }) }),
+  getNotifications: () => request(`/admin-notifications`),
+  getUnreadNotificationCount: () => request(`/admin-notifications/unread-count`),
+  markNotificationRead: (id) => request(`/admin-notifications/${id}/read`, { method: "PUT" }),
+  markAllNotificationsRead: () => request(`/admin-notifications/read-all`, { method: "PUT" }),
 
   getStats: () => request(`/dashboard/stats`),
 

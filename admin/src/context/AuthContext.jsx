@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { api } from "../api.js";
+import { setupAdminNotifications } from "../firebaseMessaging.js";
 
 const AuthContext = createContext(null);
 const TOKEN_KEY = "nvfresh_admin_token";
@@ -18,6 +19,24 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(false);
 
   const isAuthenticated = Boolean(window.localStorage.getItem(TOKEN_KEY));
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    let active = true;
+    let unsubscribe = () => {};
+    setupAdminNotifications().then((cleanup) => {
+      if (active) unsubscribe = cleanup;
+      else cleanup();
+    }).catch((err) => {
+      if (active) {
+        console.error("[admin-notifications] Could not enable notifications:", err.message);
+      }
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [isAuthenticated]);
 
   async function login(user, pass) {
     setLoading(true);

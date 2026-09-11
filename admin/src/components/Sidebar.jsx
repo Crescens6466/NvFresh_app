@@ -1,11 +1,13 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { api } from "../api.js";
 import {
   HiOutlineSquares2X2,
   HiOutlineCube,
   HiOutlineClipboardDocumentList,
   HiOutlineUsers,
   HiOutlineCog6Tooth,
+  HiOutlineBell,
   HiOutlineArrowLeftOnRectangle,
 } from "react-icons/hi2";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -17,11 +19,40 @@ const LINKS = [
   { to: "/orders", label: "Orders", Icon: HiOutlineClipboardDocumentList },
   { to: "/customers", label: "Customers", Icon: HiOutlineUsers },
   { to: "/settings", label: "Settings", Icon: HiOutlineCog6Tooth },
+  { to: "/notifications", label: "Notifications", Icon: HiOutlineBell },
 ];
 
 export default function Sidebar() {
   const { logout, username } = useAuth();
   const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = React.useState(0);
+  const [showUnreadAlert, setShowUnreadAlert] = React.useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    const refresh = (showAlert = false) => {
+      api.getUnreadNotificationCount()
+        .then(({ count }) => {
+          if (active) {
+            setUnreadCount(count);
+            if (showAlert && count > 0) setShowUnreadAlert(true);
+            if (count === 0) setShowUnreadAlert(false);
+          }
+        })
+        .catch(() => {});
+    };
+    refresh(true);
+    const interval = window.setInterval(refresh, 15000);
+    const handleNotificationUpdate = (event) => {
+      refresh(event.detail?.showAlert === true);
+    };
+    window.addEventListener("admin-notifications-updated", handleNotificationUpdate);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener("admin-notifications-updated", handleNotificationUpdate);
+    };
+  }, []);
 
   function handleLogout() {
     logout();
@@ -36,10 +67,37 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
+        {showUnreadAlert && unreadCount > 0 && (
+          <div className="sidebar-notification-alert">
+            <span>
+              {unreadCount} new notification{unreadCount === 1 ? "" : "s"}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setShowUnreadAlert(false);
+                navigate("/notifications");
+              }}
+            >
+              View notifications
+            </button>
+            <button
+              type="button"
+              className="sidebar-notification-dismiss"
+              aria-label="Dismiss notification alert"
+              onClick={() => setShowUnreadAlert(false)}
+            >
+              ×
+            </button>
+          </div>
+        )}
         {LINKS.map(({ to, label, Icon, end }) => (
           <NavLink key={to} to={to} end={end} className="sidebar-link">
             <Icon />
             <span>{label}</span>
+            {to === "/notifications" && unreadCount > 0 && (
+              <span className="sidebar-notification-badge">{unreadCount}</span>
+            )}
           </NavLink>
         ))}
       </nav>

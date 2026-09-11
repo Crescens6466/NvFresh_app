@@ -3,6 +3,8 @@ import express from "express";
 import Order from "../models/Order.js";
 import Customer from "../models/Customer.js";
 import Settings from "../models/Settings.js";
+import Admin from "../models/Admin.js";
+import Notification from "../models/Notification.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireCustomerAuth } from "../middleware/customerAuth.js";
 import {
@@ -21,6 +23,7 @@ import {
   OrderValidationError,
 } from "../utils/pricing.js";
 import { buildUpiUrl, generateQrDataUrl } from "../utils/upiPayment.js";
+import { sendAdminNewOrderNotification } from "../firebaseAdmin.js";
 
 const router = express.Router();
 
@@ -153,6 +156,25 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
     Settings.findOne()
       .then((settings) => notifyAndRecord(order._id, sendAdminOrderAlert(clientOrder, settings?.phone_number)))
       .catch((err) => console.error(`[notify] Could not load Settings for admin alert:`, err.message));
+    Promise.resolve()
+      .then(async () => {
+        const admins = await Admin.find().select("_id").lean();
+        await Notification.insertMany(
+          admins.map((admin) => ({
+            recipientAdmin: admin._id,
+            type: "new_order",
+            title: "New Order Received",
+            message: `Order #${clientOrder.id} • ₹${clientOrder.total}`,
+            orderId: order._id,
+          }))
+        );
+      })
+      .catch((err) => console.error("[admin-notifications] Could not save notification:", err.message))
+      .finally(() =>
+        sendAdminNewOrderNotification(clientOrder).catch((err) =>
+          console.error("[fcm] Could not send admin new-order notification:", err.message)
+        )
+      );
 
     res.status(201).json(clientOrder);
   } catch (err) {
