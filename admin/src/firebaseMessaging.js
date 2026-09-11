@@ -41,9 +41,6 @@ export async function setupAdminNotifications() {
   if (!isConfigured || !("Notification" in window) || !("serviceWorker" in navigator) || !vapidKey) return () => {};
   if (!(await isSupported())) return () => {};
 
-  if (Notification.permission === "default") {
-    await Notification.requestPermission();
-  }
   if (Notification.permission !== "granted") return () => {};
 
   const registration = await getActiveServiceWorkerRegistration();
@@ -67,4 +64,21 @@ export async function setupAdminNotifications() {
     };
   });
   return unsubscribe;
+}
+
+export async function enableAdminNotifications() {
+  if (!("Notification" in window)) {
+    throw new Error("Browser notifications are not supported");
+  }
+
+  const permission =
+    Notification.permission === "default"
+      ? await Notification.requestPermission()
+      : Notification.permission;
+  if (permission !== "granted") {
+    return { enabled: false, permission };
+  }
+
+  const cleanup = await setupAdminNotifications();
+  return { enabled: true, cleanup };
 }

@@ -1,6 +1,7 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
+import { enableAdminNotifications } from "../firebaseMessaging.js";
 import {
   HiOutlineSquares2X2,
   HiOutlineCube,
@@ -27,6 +28,11 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [showUnreadAlert, setShowUnreadAlert] = React.useState(false);
+  const [notificationPermission, setNotificationPermission] = React.useState(
+    () => ("Notification" in window ? Notification.permission : "unsupported")
+  );
+  const [notificationStatus, setNotificationStatus] = React.useState("");
+  const [enablingNotifications, setEnablingNotifications] = React.useState(false);
 
   React.useEffect(() => {
     let active = true;
@@ -59,6 +65,27 @@ export default function Sidebar() {
     navigate("/login");
   }
 
+  async function handleEnableNotifications() {
+    setEnablingNotifications(true);
+    setNotificationStatus("");
+    try {
+      const result = await enableAdminNotifications();
+      setNotificationPermission(result.permission || "granted");
+      if (result.enabled) {
+        setNotificationStatus("Notifications enabled");
+        window.dispatchEvent(new CustomEvent("admin-notifications-updated", {
+          detail: { showAlert: false },
+        }));
+      } else if (result.permission === "denied") {
+        setNotificationStatus("Notifications are blocked in your browser settings.");
+      }
+    } catch (err) {
+      setNotificationStatus(err.message || "Could not enable notifications");
+    } finally {
+      setEnablingNotifications(false);
+    }
+  }
+
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -67,6 +94,23 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
+        {notificationPermission === "default" && (
+          <div className="sidebar-enable-notifications">
+            <span>Get alerts when a new order is placed.</span>
+            <button type="button" onClick={handleEnableNotifications} disabled={enablingNotifications}>
+              <HiOutlineBell />
+              {enablingNotifications ? "Enabling..." : "Enable Notifications"}
+            </button>
+          </div>
+        )}
+        {notificationPermission === "denied" && (
+          <div className="sidebar-notification-status">
+            Notifications are blocked in your browser settings.
+          </div>
+        )}
+        {notificationStatus && (
+          <div className="sidebar-notification-status">{notificationStatus}</div>
+        )}
         {showUnreadAlert && unreadCount > 0 && (
           <div className="sidebar-notification-alert">
             <span>
