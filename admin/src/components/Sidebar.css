@@ -149,10 +149,16 @@
   }
   .sidebar-brand span,
   .sidebar-link span,
-  .sidebar-notification-alert,
   .sidebar-user span,
   .sidebar-logout span {
     display: none;
+  }
+  .sidebar-notification-alert {
+    position: fixed;
+    top: 8px;
+    left: 84px;
+    z-index: 10;
+    width: 220px;
   }
   .sidebar-brand h1 {
     font-size: 1.1rem;

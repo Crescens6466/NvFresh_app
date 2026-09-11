@@ -13,6 +13,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
+  console.info("[admin-notifications] Background FCM message received");
   const title = payload.data?.title || "New Order Received";
   const body = payload.data?.body || "A new order was received.";
   self.registration.showNotification(title, {

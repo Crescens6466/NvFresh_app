@@ -41,6 +41,7 @@ export async function sendAdminNewOrderNotification(order) {
   }
 
   const orderId = String(order.id);
+  console.info(`[admin-notifications] Registered admin token count: ${uniqueTokenOwners.length}`);
   console.info(`[admin-notifications] Sending FCM notification to ${uniqueTokenOwners.length} device(s)`);
   const response = await firebaseMessaging.sendEachForMulticast({
     tokens: uniqueTokenOwners.map(({ token }) => token),

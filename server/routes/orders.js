@@ -168,6 +168,7 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
             orderId: order._id,
           }))
         );
+        console.info(`[admin-notifications] Order notification created for ${admins.length} admin(s)`);
       })
       .catch((err) => console.error("[admin-notifications] Could not save notification:", err.message))
       .finally(() =>

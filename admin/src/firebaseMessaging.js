@@ -54,6 +54,7 @@ export async function setupAdminNotifications() {
   console.info("[admin-notifications] FCM token obtained");
   await api.registerFcmToken(token);
   const unsubscribe = onMessage(messaging, (payload) => {
+    console.info("[admin-notifications] Foreground FCM message received");
     window.dispatchEvent(new CustomEvent("admin-notifications-updated", {
       detail: { showAlert: true },
     }));
