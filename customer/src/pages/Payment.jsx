@@ -8,18 +8,21 @@ import { api } from "../api.js";
 import "./Payment.css";
 
 const ADVANCE_OPTIONS = [25, 50, 75, 100];
+const PHONEPE_TEST_MODE = true;
 
 function getMobilePaymentUrl(upiUrl) {
   if (!upiUrl || typeof navigator === "undefined") return upiUrl;
 
   const isAndroidMobile = /Android/i.test(navigator.userAgent)
     && /Mobile/i.test(navigator.userAgent);
-  if (!isAndroidMobile || !upiUrl.startsWith("upi://pay?")) return upiUrl;
+  if (!PHONEPE_TEST_MODE || !isAndroidMobile || !upiUrl.startsWith("upi://pay?")) {
+    return upiUrl;
+  }
 
-  const query = upiUrl.slice("upi://pay?".length);
-  if (!query || query.includes("#")) return upiUrl;
+  const phonePeUrl = upiUrl.replace(/^upi:\/\/pay\?/, "phonepe://pay?");
+  if (phonePeUrl === upiUrl || phonePeUrl.includes("#")) return upiUrl;
 
-  return `intent://pay?${query}#Intent;scheme=upi;end`;
+  return phonePeUrl;
 }
 
 export default function Payment() {
@@ -45,6 +48,12 @@ export default function Payment() {
   });
   const [submitting, setSubmitting] = useState(false);
   const mobilePaymentUrl = getMobilePaymentUrl(quote?.upiUrl);
+
+  useEffect(() => {
+    if (import.meta.env.DEV && mobilePaymentUrl?.startsWith("phonepe://pay?")) {
+      console.log("[payment] PhonePe test URL generated:", mobilePaymentUrl);
+    }
+  }, [mobilePaymentUrl]);
 
   useEffect(() => {
     if (items.length === 0) {
