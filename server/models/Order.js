@@ -35,6 +35,9 @@ const orderSchema = new mongoose.Schema(
     // transaction_id doubles as the UPI UTR the customer provides as proof
     // of the advance payment.
     transaction_id: { type: String, required: true },
+    // Server-generated reference embedded in the payment QR. This is
+    // intentionally separate from the customer's submitted UPI/UTR reference.
+    payment_reference: { type: String, default: null, index: true },
     // Payment verification is manual — admin only, never flips to Paid
     // automatically just because a UTR was submitted.
     advance_payment_status: {

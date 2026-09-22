@@ -101,6 +101,7 @@ export default function Payment() {
           items: items.map((i) => ({ productId: i.productId, weight: i.weight, quantity: i.quantity })),
           advancePercentage,
           transactionId: form.transactionId,
+          transactionReference: quote.transactionReference,
         },
         token
       );

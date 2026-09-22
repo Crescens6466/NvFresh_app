@@ -3,6 +3,11 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import { enableAdminNotifications } from "../firebaseMessaging.js";
 import {
+  connectNotificationSocket,
+  disconnectNotificationSocket,
+  refreshNotificationState,
+} from "../notificationSocket.js";
+import {
   HiOutlineSquares2X2,
   HiOutlineCube,
   HiOutlineClipboardDocumentList,
@@ -48,14 +53,37 @@ export default function Sidebar() {
         .catch(() => {});
     };
     refresh(true);
-    const interval = window.setInterval(refresh, 15000);
+    connectNotificationSocket();
+    const refreshFromServer = () => refreshNotificationState().catch(() => {});
+    const interval = window.setInterval(refreshFromServer, 60000);
+    const handleCount = (event) => {
+      if (active) {
+        const count = event.detail?.count ?? 0;
+        setUnreadCount(count);
+        if (count === 0) setShowUnreadAlert(false);
+      }
+    };
+    const handleReceived = (event) => {
+      if (!active) return;
+      const notification = event.detail;
+      setUnreadCount((count) => count + 1);
+      setShowUnreadAlert(true);
+      window.dispatchEvent(new CustomEvent("admin-notifications-updated", {
+        detail: { notification, showAlert: true },
+      }));
+    };
     const handleNotificationUpdate = (event) => {
       refresh(event.detail?.showAlert === true);
     };
+    window.addEventListener("admin-notifications-count", handleCount);
+    window.addEventListener("admin-notifications-received", handleReceived);
     window.addEventListener("admin-notifications-updated", handleNotificationUpdate);
     return () => {
       active = false;
       window.clearInterval(interval);
+      disconnectNotificationSocket();
+      window.removeEventListener("admin-notifications-count", handleCount);
+      window.removeEventListener("admin-notifications-received", handleReceived);
       window.removeEventListener("admin-notifications-updated", handleNotificationUpdate);
     };
   }, []);

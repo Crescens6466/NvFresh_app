@@ -23,8 +23,16 @@ export default function Notifications() {
       detail: { showAlert: false },
     }));
     refresh().finally(() => setLoading(false));
-    const interval = window.setInterval(refresh, 15000);
-    return () => window.clearInterval(interval);
+    const handleReceived = (event) => {
+      if (event.detail) {
+        setNotifications((current) => [
+          event.detail,
+          ...current.filter((notification) => notification.id !== event.detail.id),
+        ]);
+      }
+    };
+    window.addEventListener("admin-notifications-received", handleReceived);
+    return () => window.removeEventListener("admin-notifications-received", handleReceived);
   }, []);
 
   async function openNotification(notification) {

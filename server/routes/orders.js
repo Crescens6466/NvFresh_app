@@ -22,8 +22,9 @@ import {
   isValidAdvancePercentage,
   OrderValidationError,
 } from "../utils/pricing.js";
-import { buildUpiUrl, generateQrDataUrl } from "../utils/upiPayment.js";
+import { buildUpiUrl, createPaymentReference, generateQrDataUrl } from "../utils/upiPayment.js";
 import { sendAdminNewOrderNotification } from "../firebaseAdmin.js";
+import { emitAdminNotification } from "../realtime.js";
 
 const router = express.Router();
 
@@ -65,6 +66,7 @@ router.post("/quote", requireCustomerAuth, async (req, res, next) => {
 
     const { resolvedItems, subtotal, deliveryCharge, total } = await computeOrderTotals(items);
     const { advanceAmount, remainingAmount } = computeAdvance(total, Number(advancePercentage));
+    const transactionReference = createPaymentReference();
 
     const settings = await Settings.findOne();
     let qrDataUrl = null;
@@ -73,6 +75,7 @@ router.post("/quote", requireCustomerAuth, async (req, res, next) => {
       upiUrl = buildUpiUrl({
         upiId: settings.upi_id,
         businessName: settings.business_name || "NvFresh",
+        transactionReference,
         amount: advanceAmount,
         note: `NvFresh advance ${advancePercentage}%`,
       });
@@ -87,6 +90,7 @@ router.post("/quote", requireCustomerAuth, async (req, res, next) => {
       advancePercentage: Number(advancePercentage),
       advanceAmount,
       remainingAmount,
+      transactionReference,
       upiUrl,
       qrDataUrl,
     });
@@ -104,7 +108,15 @@ router.post("/quote", requireCustomerAuth, async (req, res, next) => {
 // they want and what advance % they chose.
 router.post("/", requireCustomerAuth, async (req, res, next) => {
   try {
-    const { customerName, phone, address, items, advancePercentage, transactionId } = req.body;
+    const {
+      customerName,
+      phone,
+      address,
+      items,
+      advancePercentage,
+      transactionId,
+      transactionReference,
+    } = req.body;
 
     if (!customerName || !phone || !address || !transactionId) {
       return res.status(400).json({ error: "Missing required order fields" });
@@ -135,6 +147,7 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
       advance_percentage: Number(advancePercentage),
       remaining_amount: remainingAmount,
       transaction_id: transactionId,
+      payment_reference: transactionReference || null,
       status: "Pending",
     });
 
@@ -159,7 +172,7 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
     Promise.resolve()
       .then(async () => {
         const admins = await Admin.find().select("_id").lean();
-        await Notification.insertMany(
+        const createdNotifications = await Notification.insertMany(
           admins.map((admin) => ({
             recipientAdmin: admin._id,
             type: "new_order",
@@ -169,6 +182,17 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
           }))
         );
         console.info(`[admin-notifications] Order notification created for ${admins.length} admin(s)`);
+        createdNotifications.forEach((notification, index) =>
+          emitAdminNotification(String(admins[index]._id), {
+            id: String(notification._id),
+            type: "new_order",
+            title: "New Order Received",
+            message: `Order #${clientOrder.id} • ₹${clientOrder.total}`,
+            orderId: String(order._id),
+            createdAt: notification.createdAt.toISOString(),
+            isRead: false,
+          })
+        );
       })
       .catch((err) => console.error("[admin-notifications] Could not save notification:", err.message))
       .finally(() =>
