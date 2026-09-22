@@ -9,6 +9,19 @@ import "./Payment.css";
 
 const ADVANCE_OPTIONS = [25, 50, 75, 100];
 
+function getMobilePaymentUrl(upiUrl) {
+  if (!upiUrl || typeof navigator === "undefined") return upiUrl;
+
+  const isAndroidMobile = /Android/i.test(navigator.userAgent)
+    && /Mobile/i.test(navigator.userAgent);
+  if (!isAndroidMobile || !upiUrl.startsWith("upi://pay?")) return upiUrl;
+
+  const query = upiUrl.slice("upi://pay?".length);
+  if (!query || query.includes("#")) return upiUrl;
+
+  return `intent://pay?${query}#Intent;scheme=upi;end`;
+}
+
 export default function Payment() {
   const { items, clearCart } = useCart();
   const navigate = useNavigate();
@@ -31,6 +44,7 @@ export default function Payment() {
     transactionId: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const mobilePaymentUrl = getMobilePaymentUrl(quote?.upiUrl);
 
   useEffect(() => {
     if (items.length === 0) {
@@ -191,7 +205,7 @@ export default function Payment() {
           Scan to pay {quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`} via any UPI app
         </p>
         {quote?.upiUrl ? (
-          <a className="payment-upi payment-upi-link" href={quote.upiUrl}>
+          <a className="payment-upi payment-upi-link" href={mobilePaymentUrl}>
             {settings?.upi_id || "nvfresh@upi"}
             <span className="payment-upi-hint">Tap to pay in your UPI app</span>
           </a>
