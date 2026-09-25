@@ -1,7 +1,6 @@
 // app.js — the Express app itself, with no listener attached.
-// server.js uses this for local dev (app.listen); api/index.js uses this
-// for Vercel's serverless runtime (no listener — Vercel invokes the app
-// directly as a request handler).
+// server.js and api/index.js wrap it in an HTTP server; api/index.js also
+// attaches Socket.IO for Vercel's WebSocket-capable Functions runtime.
 import express from "express";
 import cors from "cors";
 import path from "path";

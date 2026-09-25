@@ -1,6 +1,6 @@
 // server.js — local dev entry point (persistent listener).
-// For Vercel's serverless runtime, see api/index.js instead — Vercel invokes
-// the Express app directly per-request rather than through app.listen().
+// Vercel uses api/index.js, which exports the same HTTP + Socket.IO server
+// shape for its WebSocket-capable Functions runtime.
 import "dotenv/config";
 import { createServer } from "http";
 import app from "./app.js";

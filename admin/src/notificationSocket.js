@@ -16,7 +16,8 @@ export function connectNotificationSocket() {
 
   socket = io(getSocketUrl(), {
     auth: { token: window.localStorage.getItem("nvfresh_admin_token") },
-    transports: ["websocket", "polling"],
+    path: "/api/index/socket.io",
+    transports: ["websocket"],
   });
 
   socket.on("new_admin_notification", (notification) => {
