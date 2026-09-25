@@ -1,5 +1,6 @@
 // routes/orders.js — order placement and management (MongoDB)
 import express from "express";
+import { waitUntil } from "@vercel/functions";
 import Order from "../models/Order.js";
 import Customer from "../models/Customer.js";
 import Settings from "../models/Settings.js";
@@ -53,9 +54,8 @@ function notifyAndRecord(orderId, notifierPromise) {
     .catch((err) => console.error("[orders] Could not record WhatsApp notification:", err.message));
 }
 
-function sendAdminOrderTelegramOnce(orderId, order) {
-  Promise.resolve()
-    .then(async () => {
+async function sendAdminOrderTelegramOnce(orderId, order) {
+  try {
       const claimedOrder = await Order.findOneAndUpdate(
         {
           _id: orderId,
@@ -100,8 +100,9 @@ function sendAdminOrderTelegramOnce(orderId, order) {
         );
         console.error("[admin-telegram] Could not send admin order notification:", err.message);
       }
-    })
-    .catch((err) => console.error("[admin-telegram] Could not claim notification:", err.message));
+  } catch (err) {
+    console.error("[admin-telegram] Could not claim notification:", err.message);
+  }
 }
 
 // POST /api/orders/quote — live preview of totals + a dynamic QR for the
@@ -221,12 +222,12 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
     Settings.findOne()
       .then((settings) => notifyAndRecord(order._id, sendAdminOrderAlert(clientOrder, settings?.phone_number)))
       .catch((err) => console.error(`[notify] Could not load Settings for admin alert:`, err.message));
-    sendAdminOrderTelegramOnce(order._id, {
+    waitUntil(sendAdminOrderTelegramOnce(order._id, {
       id: clientOrder.id,
       total: clientOrder.total,
       customer_name: clientOrder.customer_name,
       phone: clientOrder.phone,
-    });
+    }));
     Promise.resolve()
       .then(async () => {
         const admins = await Admin.find().select("_id").lean();
