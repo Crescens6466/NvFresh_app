@@ -25,6 +25,7 @@ import {
 import { buildUpiUrl, createPaymentReference, generateQrDataUrl } from "../utils/upiPayment.js";
 import { sendAdminNewOrderNotification } from "../firebaseAdmin.js";
 import { emitAdminNotification } from "../realtime.js";
+import { sendAdminOrderTelegram } from "../utils/telegram.js";
 
 const router = express.Router();
 
@@ -50,6 +51,57 @@ function notifyAndRecord(orderId, notifierPromise) {
       });
     })
     .catch((err) => console.error("[orders] Could not record WhatsApp notification:", err.message));
+}
+
+function sendAdminOrderTelegramOnce(orderId, order) {
+  Promise.resolve()
+    .then(async () => {
+      const claimedOrder = await Order.findOneAndUpdate(
+        {
+          _id: orderId,
+          "admin_telegram_notification.status": "pending",
+        },
+        {
+          $set: {
+            "admin_telegram_notification.status": "sending",
+            "admin_telegram_notification.attempted_at": new Date(),
+          },
+        },
+        { new: true }
+      );
+      if (!claimedOrder) return;
+
+      try {
+        await sendAdminOrderTelegram({
+          orderId: order.id,
+          amount: order.total,
+          customerName: order.customer_name,
+          phone: order.phone,
+        });
+        await Order.updateOne(
+          { _id: orderId, "admin_telegram_notification.status": "sending" },
+          {
+            $set: {
+              "admin_telegram_notification.status": "sent",
+              "admin_telegram_notification.sent_at": new Date(),
+            },
+            $unset: { "admin_telegram_notification.error": 1 },
+          }
+        );
+      } catch (err) {
+        await Order.updateOne(
+          { _id: orderId, "admin_telegram_notification.status": "sending" },
+          {
+            $set: {
+              "admin_telegram_notification.status": "failed",
+              "admin_telegram_notification.error": err.message,
+            },
+          }
+        );
+        console.error("[admin-telegram] Could not send admin order notification:", err.message);
+      }
+    })
+    .catch((err) => console.error("[admin-telegram] Could not claim notification:", err.message));
 }
 
 // POST /api/orders/quote — live preview of totals + a dynamic QR for the
@@ -169,6 +221,12 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
     Settings.findOne()
       .then((settings) => notifyAndRecord(order._id, sendAdminOrderAlert(clientOrder, settings?.phone_number)))
       .catch((err) => console.error(`[notify] Could not load Settings for admin alert:`, err.message));
+    sendAdminOrderTelegramOnce(order._id, {
+      id: clientOrder.id,
+      total: clientOrder.total,
+      customer_name: clientOrder.customer_name,
+      phone: clientOrder.phone,
+    });
     Promise.resolve()
       .then(async () => {
         const admins = await Admin.find().select("_id").lean();

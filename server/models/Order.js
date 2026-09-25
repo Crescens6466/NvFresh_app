@@ -38,6 +38,26 @@ const orderSchema = new mongoose.Schema(
     // Server-generated reference embedded in the payment QR. This is
     // intentionally separate from the customer's submitted UPI/UTR reference.
     payment_reference: { type: String, default: null, index: true },
+    admin_sms_notification: {
+      status: {
+        type: String,
+        enum: ["pending", "sending", "sent", "failed"],
+        default: "pending",
+      },
+      attempted_at: { type: Date, default: null },
+      sent_at: { type: Date, default: null },
+      error: { type: String, default: null },
+    },
+    admin_telegram_notification: {
+      status: {
+        type: String,
+        enum: ["pending", "sending", "sent", "failed"],
+        default: "pending",
+      },
+      attempted_at: { type: Date, default: null },
+      sent_at: { type: Date, default: null },
+      error: { type: String, default: null },
+    },
     // Payment verification is manual — admin only, never flips to Paid
     // automatically just because a UTR was submitted.
     advance_payment_status: {
