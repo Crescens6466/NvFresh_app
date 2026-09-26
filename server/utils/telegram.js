@@ -16,7 +16,10 @@ export function buildAdminOrderTelegramPayload({ chatId, orderId, customerName, 
       "",
       "📦 New order received.",
       "Please open the Admin panel to process the order.",
+      "",
+      '<a href="https://admin.nvfresh.in">🔗 Open Admin Panel</a>',
     ].join("\n"),
+    parse_mode: "HTML",
   };
 }
 
