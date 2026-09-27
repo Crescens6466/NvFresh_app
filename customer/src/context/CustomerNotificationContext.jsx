@@ -21,6 +21,9 @@ export function CustomerNotificationProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [permission, setPermission] = useState(getPermission);
+  const [deviceRegistered, setDeviceRegistered] = useState(false);
+  const [deviceRegistrationLoading, setDeviceRegistrationLoading] = useState(false);
+  const [deviceRegistrationError, setDeviceRegistrationError] = useState("");
   const lastAuthToken = useRef(null);
   const registeredDevice = useRef(null);
 
@@ -37,17 +40,31 @@ export function CustomerNotificationProvider({ children }) {
   }
 
   async function registerDevice(bearer, active = () => true) {
+    if (registeredDevice.current?.bearer === bearer) {
+      setDeviceRegistered(true);
+      return true;
+    }
+    setDeviceRegistrationLoading(true);
+    setDeviceRegistrationError("");
     try {
       const deviceToken = await getCustomerPushToken();
-      if (!active()) return;
+      if (!active()) return false;
       await api.registerCustomerDeviceToken(deviceToken, bearer);
       if (!active()) {
         await api.removeCustomerDeviceToken(deviceToken, bearer).catch(() => {});
-        return;
+        return false;
       }
       registeredDevice.current = { token: deviceToken, bearer };
+      setDeviceRegistered(true);
+      return true;
     } catch (registrationError) {
+      setDeviceRegistrationError(
+        registrationError.message || "Could not register this device for notifications."
+      );
       console.warn("Customer web push registration failed:", registrationError.message);
+      return false;
+    } finally {
+      setDeviceRegistrationLoading(false);
     }
   }
 
@@ -59,6 +76,9 @@ export function CustomerNotificationProvider({ children }) {
       setUnreadCount(0);
       setError("");
       setLoading(false);
+      setDeviceRegistered(false);
+      setDeviceRegistrationLoading(false);
+      setDeviceRegistrationError("");
       const registered = registeredDevice.current;
       registeredDevice.current = null;
       const bearer = registered?.bearer || lastAuthToken.current;
@@ -157,7 +177,6 @@ export function CustomerNotificationProvider({ children }) {
   }, [authLoading, isLoggedIn]);
 
   async function enableNotifications() {
-    if (!isLoggedIn) throw new Error("Sign in to enable notifications.");
     if (typeof Notification === "undefined") {
       setPermission("unsupported");
       throw new Error("This browser does not support web notifications.");
@@ -176,12 +195,16 @@ export function CustomerNotificationProvider({ children }) {
       );
     }
 
+    if (!isLoggedIn) return true;
+
     const bearer = await getIdToken();
     if (!bearer) throw new Error("Your session has expired. Please sign in again.");
     const deviceToken = await getCustomerPushToken();
     await api.registerCustomerDeviceToken(deviceToken, bearer);
     registeredDevice.current = { token: deviceToken, bearer };
     lastAuthToken.current = bearer;
+    setDeviceRegistered(true);
+    setDeviceRegistrationError("");
     return true;
   }
 
@@ -223,6 +246,9 @@ export function CustomerNotificationProvider({ children }) {
         error,
         permission,
         isLoggedIn,
+        deviceRegistered,
+        deviceRegistrationLoading,
+        deviceRegistrationError,
         enableNotifications,
         markRead,
         markAllRead,

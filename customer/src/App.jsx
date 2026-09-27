@@ -16,6 +16,7 @@ import Privacy from "./pages/Privacy.jsx";
 import Terms from "./pages/Terms.jsx";
 import OrderSuccess from "./pages/OrderSuccess.jsx";
 import CustomerNotifications from "./pages/CustomerNotifications.jsx";
+import CustomerNotificationPrompt from "./components/CustomerNotificationPrompt.jsx";
 
 export default function App() {
   const location = useLocation();
@@ -25,6 +26,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <Header />
+      <CustomerNotificationPrompt />
       <main className="page-fade">
         <Routes>
           <Route path="/" element={<Home />} />
