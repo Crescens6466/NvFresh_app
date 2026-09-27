@@ -24,7 +24,22 @@ async function registerCustomerServiceWorker() {
   for (const key of firebaseConfigKeys) {
     if (firebaseConfig[key]) params.set(key, firebaseConfig[key]);
   }
-  return navigator.serviceWorker.register(`${workerScript}?${params.toString()}`);
+  const registration = await navigator.serviceWorker.register(
+    `${workerScript}?${params.toString()}`
+  );
+  const readyRegistration = await navigator.serviceWorker.ready;
+  const activeRegistration =
+    registration.active
+      ? registration
+      : readyRegistration.scope === registration.scope
+        ? readyRegistration
+        : null;
+
+  if (!activeRegistration?.active) {
+    throw new Error("The notification service worker is not active yet. Please try again.");
+  }
+
+  return activeRegistration;
 }
 
 export async function getCustomerPushToken() {
