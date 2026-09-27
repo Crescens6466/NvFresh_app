@@ -46,12 +46,13 @@ export function buildCustomerPushMessage(notification, webUrl = process.env.CUST
   const route = `/orders?orderId=${encodeURIComponent(orderId)}`;
   const normalizedWebUrl = webUrl?.replace(/\/+$/, "");
   return {
-    notification: { title: notification.title, body: notification.message },
     data: {
       notificationId: String(notification._id),
       type: notification.type,
       orderId,
       route,
+      title: notification.title,
+      message: notification.message,
     },
     ...(normalizedWebUrl
       ? { webpush: { fcmOptions: { link: `${normalizedWebUrl}${route}` } } }

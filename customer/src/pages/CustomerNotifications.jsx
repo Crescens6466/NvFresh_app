@@ -22,6 +22,9 @@ export default function CustomerNotifications() {
     error,
     permission,
     isLoggedIn,
+    deviceRegistered,
+    deviceRegistrationLoading,
+    deviceRegistrationError,
     enableNotifications,
     markRead,
     markAllRead,
@@ -29,16 +32,13 @@ export default function CustomerNotifications() {
   } = useCustomerNotifications();
   const [enabling, setEnabling] = useState(false);
   const [actionError, setActionError] = useState("");
-  const [actionSuccess, setActionSuccess] = useState("");
   const [savingAll, setSavingAll] = useState(false);
 
   async function handleEnable() {
     setEnabling(true);
     setActionError("");
-    setActionSuccess("");
     try {
       await enableNotifications();
-      setActionSuccess("Notifications are enabled on this device.");
     } catch (enableError) {
       setActionError(enableError.message || "Could not enable notifications.");
     } finally {
@@ -100,49 +100,59 @@ export default function CustomerNotifications() {
         </div>
       ) : (
         <>
-          <div className="notifications-push-card">
-            <div className="notifications-push-icon">
-              <HiOutlineBell aria-hidden="true" />
-            </div>
-            <div className="notifications-push-copy">
-              <h3>Get updates on this device</h3>
-              <p>
-                {!isCustomerPushConfigured
-                  ? "Web push has not been configured for this site yet."
-                  : permission === "granted"
-                  ? "Browser notifications are allowed. NvFresh will register this device for order alerts."
-                  : permission === "denied"
-                    ? "Notifications are blocked. Allow them in your browser settings, then try again."
-                    : "Enable browser notifications to see important order updates as they arrive."}
-              </p>
-            </div>
-            <button
-              className="btn btn-outline notifications-enable"
-              onClick={handleEnable}
-              disabled={
-                enabling || permission === "unsupported" || !isCustomerPushConfigured
-              }
-            >
-              {!isCustomerPushConfigured
-                ? "Unavailable"
-                : enabling
-                ? "Enabling…"
-                : permission === "granted"
-                  ? "Enable on device"
-                  : permission === "unsupported"
-                    ? "Not supported"
-                    : "Enable notifications"}
-            </button>
-          </div>
-
-          {(error || actionError) && (
-            <p className="notifications-message notifications-error" role="alert">
-              {actionError || error}
-            </p>
-          )}
-          {actionSuccess && (
+          {permission === "granted" && deviceRegistered ? (
             <p className="notifications-message notifications-success" role="status">
-              {actionSuccess}
+              Notifications are enabled on this device.
+            </p>
+          ) : (
+            <div className="notifications-push-card">
+              <div className="notifications-push-icon">
+                <HiOutlineBell aria-hidden="true" />
+              </div>
+              <div className="notifications-push-copy">
+                <h3>Get updates on this device</h3>
+                <p>
+                  {!isCustomerPushConfigured
+                    ? "Web push has not been configured for this site yet."
+                    : permission === "denied"
+                      ? "Notifications are blocked. Allow them in your browser settings, then try again."
+                      : deviceRegistrationLoading
+                        ? "Registering this device for order alerts…"
+                        : deviceRegistrationError || actionError
+                          ? `Could not finish device setup: ${deviceRegistrationError || actionError}`
+                          : permission === "granted"
+                            ? "Browser notifications are allowed. Finish setting up this device for order alerts."
+                            : "Enable browser notifications to see important order updates as they arrive."}
+                </p>
+              </div>
+              {permission !== "denied" && (
+                <button
+                  className="btn btn-outline notifications-enable"
+                  onClick={handleEnable}
+                  disabled={
+                    enabling ||
+                    deviceRegistrationLoading ||
+                    permission === "unsupported" ||
+                    !isCustomerPushConfigured
+                  }
+                >
+                  {enabling || deviceRegistrationLoading
+                    ? "Enabling…"
+                    : !isCustomerPushConfigured
+                      ? "Unavailable"
+                      : permission === "granted" || deviceRegistrationError || actionError
+                        ? "Retry setup"
+                        : permission === "unsupported"
+                          ? "Not supported"
+                          : "Enable notifications"}
+                </button>
+              )}
+            </div>
+          )}
+
+          {error && (
+            <p className="notifications-message notifications-error" role="alert">
+              {error}
             </p>
           )}
 

@@ -199,13 +199,24 @@ export function CustomerNotificationProvider({ children }) {
 
     const bearer = await getIdToken();
     if (!bearer) throw new Error("Your session has expired. Please sign in again.");
-    const deviceToken = await getCustomerPushToken();
-    await api.registerCustomerDeviceToken(deviceToken, bearer);
-    registeredDevice.current = { token: deviceToken, bearer };
-    lastAuthToken.current = bearer;
-    setDeviceRegistered(true);
+    setDeviceRegistrationLoading(true);
     setDeviceRegistrationError("");
-    return true;
+    try {
+      const deviceToken = await getCustomerPushToken();
+      await api.registerCustomerDeviceToken(deviceToken, bearer);
+      registeredDevice.current = { token: deviceToken, bearer };
+      lastAuthToken.current = bearer;
+      setDeviceRegistered(true);
+      return true;
+    } catch (registrationError) {
+      setDeviceRegistered(false);
+      setDeviceRegistrationError(
+        registrationError.message || "Could not register this device for notifications."
+      );
+      throw registrationError;
+    } finally {
+      setDeviceRegistrationLoading(false);
+    }
   }
 
   async function markRead(id) {

@@ -12,15 +12,17 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
+  if (payload.notification) return;
+
   const data = payload.data || {};
-  const title = payload.notification?.title || data.title || "NvFresh";
+  const title = data.title || "NvFresh";
   const orderId = data.orderId;
-  const target = orderId
+  const target = data.route || (orderId
     ? `/orders?orderId=${encodeURIComponent(orderId)}`
-    : "/notifications";
+    : "/notifications");
 
   return self.registration.showNotification(title, {
-    body: payload.notification?.body || data.message || "",
+    body: data.message || "",
     data: { target },
     tag: data.notificationId
       ? `customer-notification-${data.notificationId}`
