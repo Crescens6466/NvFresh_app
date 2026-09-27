@@ -60,6 +60,32 @@ export const api = {
       headers: authHeaders(token),
     }),
   getMyOrders: (token) => request(`/orders/mine`, { headers: authHeaders(token) }),
+  getCustomerNotifications: (token) =>
+    request(`/customer-notifications`, { headers: authHeaders(token) }),
+  getCustomerNotificationUnreadCount: (token) =>
+    request(`/customer-notifications/unread-count`, { headers: authHeaders(token) }),
+  markCustomerNotificationRead: (id, token) =>
+    request(`/customer-notifications/${encodeURIComponent(id)}/read`, {
+      method: "PUT",
+      headers: authHeaders(token),
+    }),
+  markAllCustomerNotificationsRead: (token) =>
+    request(`/customer-notifications/read-all`, {
+      method: "PUT",
+      headers: authHeaders(token),
+    }),
+  registerCustomerDeviceToken: (deviceToken, token) =>
+    request(`/customer-notifications/device-token`, {
+      method: "POST",
+      body: JSON.stringify({ token: deviceToken, platform: "web" }),
+      headers: authHeaders(token),
+    }),
+  removeCustomerDeviceToken: (deviceToken, token) =>
+    request(`/customer-notifications/device-token`, {
+      method: "DELETE",
+      body: JSON.stringify({ token: deviceToken }),
+      headers: authHeaders(token),
+    }),
   sendPhoneOtp: (phone) =>
     request(`/customer-auth/send-otp`, { method: "POST", body: JSON.stringify({ phone }) }),
   verifyPhoneOtp: (phone, code) =>

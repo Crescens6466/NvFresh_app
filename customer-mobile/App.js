@@ -16,7 +16,9 @@ import {
 import { CartProvider } from "./src/context/CartContext.jsx";
 import { ToastProvider } from "./src/context/ToastContext.jsx";
 import { CustomerAuthProvider } from "./src/context/CustomerAuthContext.jsx";
+import { CustomerNotificationsProvider } from "./src/context/CustomerNotificationsContext.jsx";
 import { navigationRef } from "./src/navigation/navigationRef.js";
+import { flushPendingNotificationNavigation } from "./src/navigation/notificationNavigation.js";
 import RootNavigator from "./src/navigation/RootNavigator.jsx";
 import AppHeader from "./src/components/AppHeader.jsx";
 import { colors } from "./src/theme.js";
@@ -52,10 +54,12 @@ export default function App() {
       <CartProvider>
         <ToastProvider>
           <CustomerAuthProvider>
-            <NavigationContainer ref={navigationRef}>
-              <AppHeader />
-              <RootNavigator />
-            </NavigationContainer>
+            <CustomerNotificationsProvider>
+              <NavigationContainer ref={navigationRef} onReady={flushPendingNotificationNavigation}>
+                <AppHeader />
+                <RootNavigator />
+              </NavigationContainer>
+            </CustomerNotificationsProvider>
           </CustomerAuthProvider>
         </ToastProvider>
       </CartProvider>

@@ -15,6 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth, isFirebaseConfigured } from "../firebase.js";
 import { api } from "../api.js";
 import { sendMsg91Otp, retryMsg91Otp, verifyMsg91Otp } from "../services/msg91Otp.js";
+import { unregisterCurrentAndroidDeviceToken } from "../services/customerNotifications.js";
 
 const CustomerAuthContext = createContext(null);
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -93,6 +94,9 @@ export function CustomerAuthProvider({ children }) {
   }
 
   async function logout() {
+    getIdToken()
+      .then((token) => (token ? unregisterCurrentAndroidDeviceToken(token) : null))
+      .catch(() => {});
     if (phoneSession) {
       await AsyncStorage.removeItem(PHONE_SESSION_KEY);
       setPhoneSession(null);

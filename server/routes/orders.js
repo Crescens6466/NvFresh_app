@@ -27,6 +27,7 @@ import { buildUpiUrl, createPaymentReference, generateQrDataUrl } from "../utils
 import { sendAdminNewOrderNotification } from "../firebaseAdmin.js";
 import { emitAdminNotification } from "../realtime.js";
 import { sendAdminOrderTelegram } from "../utils/telegram.js";
+import { createAndSendCustomerOrderNotification } from "../utils/customerNotifications.js";
 
 const router = express.Router();
 
@@ -102,6 +103,16 @@ async function sendAdminOrderTelegramOnce(orderId, order) {
       }
   } catch (err) {
     console.error("[admin-telegram] Could not claim notification:", err.message);
+  }
+}
+
+function scheduleCustomerOrderNotification(customerUid, orderId, type) {
+  const task = createAndSendCustomerOrderNotification({ customerUid, orderId, type });
+  try {
+    waitUntil(task);
+  } catch (err) {
+    console.warn("[customer-notifications] Vercel waitUntil unavailable; continuing best-effort:", err.message);
+    void task;
   }
 }
 
@@ -203,6 +214,7 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
       payment_reference: transactionReference || null,
       status: "Pending",
     });
+    scheduleCustomerOrderNotification(req.customer.uid, order._id, "order_placed");
 
     // upsert customer record
     await Customer.findOneAndUpdate(
@@ -210,7 +222,6 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
       { name: customerName, phone, address },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
-
     const clientOrder = toClient(order);
 
     // Fire-and-forget — a notification failure should never block order placement.
@@ -314,17 +325,39 @@ router.put("/:id/status", requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: "Invalid status" });
     }
 
-    const existing = await Order.findById(req.params.id);
-    if (!existing) return res.status(404).json({ error: "Order not found" });
-
-    const statusChanged = existing.status !== status;
-    existing.status = status;
+    const statusUpdate = { status };
     if (status === "Cancelled" && reason) {
-      existing.cancellation_reason = reason;
+      statusUpdate.cancellation_reason = reason;
     }
-    await existing.save();
+    let existing = await Order.findOneAndUpdate(
+      { _id: req.params.id, status: { $ne: status } },
+      { $set: statusUpdate },
+      { new: true }
+    );
+    const statusChanged = Boolean(existing);
+    if (!existing) {
+      existing = await Order.findById(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Order not found" });
+      if (status === "Cancelled" && reason && existing.status === "Cancelled") {
+        await Order.updateOne(
+          { _id: existing._id, status: "Cancelled" },
+          { $set: { cancellation_reason: reason } }
+        );
+        existing = await Order.findById(existing._id);
+      }
+    }
 
     const clientOrder = toClient(existing);
+    if (statusChanged) {
+      const eventType = {
+        Preparing: "order_preparing",
+        Delivered: "order_delivered",
+        Cancelled: "order_cancelled",
+      }[status];
+      if (eventType) {
+        scheduleCustomerOrderNotification(existing.customer_uid, existing._id, eventType);
+      }
+    }
     res.json(clientOrder);
 
     if (statusChanged) {
@@ -355,14 +388,21 @@ router.put("/:id/payment-status", requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: "Invalid payment status" });
     }
 
-    const existing = await Order.findById(req.params.id);
-    if (!existing) return res.status(404).json({ error: "Order not found" });
-
-    const becamePaid = existing.advance_payment_status !== "Paid" && status === "Paid";
-    existing.advance_payment_status = status;
-    await existing.save();
+    let existing = await Order.findOneAndUpdate(
+      { _id: req.params.id, advance_payment_status: { $ne: status } },
+      { $set: { advance_payment_status: status } },
+      { new: true }
+    );
+    const becamePaid = Boolean(existing && status === "Paid");
+    if (!existing) {
+      existing = await Order.findById(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Order not found" });
+    }
 
     const clientOrder = toClient(existing);
+    if (becamePaid) {
+      scheduleCustomerOrderNotification(existing.customer_uid, existing._id, "payment_confirmed");
+    }
     res.json(clientOrder);
 
     if (becamePaid) {

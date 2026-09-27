@@ -3,7 +3,7 @@ import { getMessaging } from "firebase-admin/messaging";
 
 let messaging = null;
 
-function getAdminMessaging() {
+export function getAdminMessaging() {
   if (messaging) return messaging;
 
   const { FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, FIREBASE_ADMIN_PRIVATE_KEY } = process.env;

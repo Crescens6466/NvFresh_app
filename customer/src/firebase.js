@@ -17,11 +17,12 @@ export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseCon
 // CustomerAuthProvider wraps the entire app, so a missing/invalid config here
 // must never crash browsing — it should just leave login/checkout disabled
 // (with a clear error when actually attempted) until VITE_FIREBASE_* is set.
+let appInstance = null;
 let authInstance = null;
 if (isFirebaseConfigured) {
   try {
-    const app = initializeApp(firebaseConfig);
-    authInstance = getAuth(app);
+    appInstance = initializeApp(firebaseConfig);
+    authInstance = getAuth(appInstance);
   } catch (err) {
     console.error("Firebase failed to initialize:", err.message);
   }
@@ -33,4 +34,6 @@ if (isFirebaseConfigured) {
 }
 
 export const auth = authInstance;
+export const app = appInstance;
+export { firebaseConfig };
 export const googleProvider = new GoogleAuthProvider();

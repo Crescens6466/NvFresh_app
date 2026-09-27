@@ -70,4 +70,18 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ accessToken }),
     }),
+  getCustomerNotifications: (token) => request(`/customer-notifications`, { headers: authHeaders(token) }),
+  getCustomerNotificationUnreadCount: (token) => request(`/customer-notifications/unread-count`, { headers: authHeaders(token) }),
+  markCustomerNotificationRead: (id, token) => request(`/customer-notifications/${encodeURIComponent(id)}/read`, { method: "PUT", headers: authHeaders(token) }),
+  markAllCustomerNotificationsRead: (token) => request(`/customer-notifications/read-all`, { method: "PUT", headers: authHeaders(token) }),
+  registerCustomerDeviceToken: (token, bearerToken) => request(`/customer-notifications/device-token`, {
+    method: "POST",
+    body: JSON.stringify({ token, platform: "android" }),
+    headers: authHeaders(bearerToken),
+  }),
+  deleteCustomerDeviceToken: (token, bearerToken) => request(`/customer-notifications/device-token`, {
+    method: "DELETE",
+    body: JSON.stringify({ token }),
+    headers: authHeaders(bearerToken),
+  }),
 };

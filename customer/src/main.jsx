@@ -6,15 +6,18 @@ import "./index.css";
 import { CartProvider } from "./context/CartContext.jsx";
 import { ToastProvider } from "./context/ToastContext.jsx";
 import { CustomerAuthProvider } from "./context/CustomerAuthContext.jsx";
+import { CustomerNotificationProvider } from "./context/CustomerNotificationContext.jsx";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <ToastProvider>
         <CustomerAuthProvider>
-          <CartProvider>
-            <App />
-          </CartProvider>
+          <CustomerNotificationProvider>
+            <CartProvider>
+              <App />
+            </CartProvider>
+          </CustomerNotificationProvider>
         </CustomerAuthProvider>
       </ToastProvider>
     </BrowserRouter>

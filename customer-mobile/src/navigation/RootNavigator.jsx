@@ -11,6 +11,7 @@ import LoginScreen from "../screens/LoginScreen.jsx";
 import PaymentScreen from "../screens/PaymentScreen.jsx";
 import OrderSuccessScreen from "../screens/OrderSuccessScreen.jsx";
 import OrderHistoryScreen from "../screens/OrderHistoryScreen.jsx";
+import CustomerNotificationsScreen from "../screens/CustomerNotificationsScreen.jsx";
 import AboutScreen from "../screens/AboutScreen.jsx";
 import ContactScreen from "../screens/ContactScreen.jsx";
 import PrivacyScreen from "../screens/PrivacyScreen.jsx";
@@ -34,6 +35,7 @@ export default function RootNavigator() {
       <Stack.Screen name="Payment" component={PaymentScreen} options={insetScreenOptions} />
       <Stack.Screen name="OrderSuccess" component={OrderSuccessScreen} options={insetScreenOptions} />
       <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} options={insetScreenOptions} />
+      <Stack.Screen name="CustomerNotifications" component={CustomerNotificationsScreen} options={insetScreenOptions} />
       <Stack.Screen name="About" component={AboutScreen} options={insetScreenOptions} />
       <Stack.Screen name="Contact" component={ContactScreen} options={insetScreenOptions} />
       <Stack.Screen name="Privacy" component={PrivacyScreen} options={insetScreenOptions} />

@@ -16,6 +16,7 @@ import settingsRouter from "./routes/settings.js";
 import dashboardRouter from "./routes/dashboard.js";
 import filesRouter from "./routes/files.js";
 import adminNotificationsRouter from "./routes/adminNotifications.js";
+import customerNotificationsRouter from "./routes/customerNotifications.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -41,6 +42,7 @@ app.use("/api/settings", settingsRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/files", filesRouter);
 app.use("/api/admin-notifications", adminNotificationsRouter);
+app.use("/api/customer-notifications", customerNotificationsRouter);
 
 // central error handler (e.g. multer file-type errors, Mongoose errors)
 app.use((err, req, res, next) => {
