@@ -1,11 +1,11 @@
 // CartScreen.jsx — ported from customer/src/pages/Cart.jsx.
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useCart } from "../context/CartContext.jsx";
 import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
-import { resolveImageUrl } from "../api.js";
+import { api, resolveImageUrl } from "../api.js";
 import EmptyState from "../components/EmptyState.jsx";
 import Button from "../components/Button.jsx";
 import { colors, radius, shadow, spacing, typography } from "../theme.js";
@@ -15,7 +15,32 @@ export default function CartScreen() {
   const { isLoggedIn } = useCustomerAuth();
   const navigation = useNavigation();
 
+  const [unavailableProductIds, setUnavailableProductIds] = useState(new Set());
+
+  useEffect(() => {
+    if (items.length === 0) return;
+    let cancelled = false;
+    api
+      .getProducts()
+      .then((products) => {
+        if (cancelled) return;
+        const unavailable = new Set(
+          products.filter((p) => p.isAvailable === false).map((p) => String(p.id))
+        );
+        setUnavailableProductIds(unavailable);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [items]);
+
+  const hasUnavailableItems = items.some((item) =>
+    unavailableProductIds.has(String(item.productId))
+  );
+
   function handleCheckout() {
+    if (hasUnavailableItems) return;
     if (isLoggedIn) navigation.navigate("Payment");
     else navigation.navigate("Login", { from: { name: "Payment" } });
   }
@@ -41,30 +66,40 @@ export default function CartScreen() {
         keyExtractor={(i) => i.key}
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: 140 }}
         ListHeaderComponent={<Text style={styles.title}>Your Cart</Text>}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <Image source={{ uri: resolveImageUrl(item.image) }} style={styles.itemImage} />
-            <View style={styles.itemInfo}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemWeight}>{item.weight}</Text>
-              <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>
-            </View>
-            <View style={styles.itemActions}>
-              <TouchableOpacity onPress={() => removeFromCart(item.key)} accessibilityLabel="Remove item">
-                <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
-              </TouchableOpacity>
-              <View style={styles.stepper}>
-                <TouchableOpacity style={styles.stepBtn} onPress={() => updateQuantity(item.key, item.quantity - 1)}>
-                  <Ionicons name="remove" size={14} color={colors.text} />
+        renderItem={({ item }) => {
+          const isItemUnavailable = unavailableProductIds.has(String(item.productId));
+          return (
+            <View style={[styles.item, isItemUnavailable && styles.itemUnavailable]}>
+              <Image source={{ uri: resolveImageUrl(item.image) }} style={styles.itemImage} />
+              <View style={styles.itemInfo}>
+                <View style={styles.nameRow}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  {isItemUnavailable && (
+                    <View style={styles.unavailableBadge}>
+                      <Text style={styles.unavailableBadgeText}>Unavailable</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.itemWeight}>{item.weight}</Text>
+                <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>
+              </View>
+              <View style={styles.itemActions}>
+                <TouchableOpacity onPress={() => removeFromCart(item.key)} accessibilityLabel="Remove item">
+                  <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
                 </TouchableOpacity>
-                <Text style={styles.stepText}>{item.quantity}</Text>
-                <TouchableOpacity style={styles.stepBtn} onPress={() => updateQuantity(item.key, item.quantity + 1)}>
-                  <Ionicons name="add" size={14} color={colors.text} />
-                </TouchableOpacity>
+                <View style={styles.stepper}>
+                  <TouchableOpacity style={styles.stepBtn} onPress={() => updateQuantity(item.key, item.quantity - 1)}>
+                    <Ionicons name="remove" size={14} color={colors.text} />
+                  </TouchableOpacity>
+                  <Text style={styles.stepText}>{item.quantity}</Text>
+                  <TouchableOpacity style={styles.stepBtn} onPress={() => updateQuantity(item.key, item.quantity + 1)}>
+                    <Ionicons name="add" size={14} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        )}
+          );
+        }}
         ListFooterComponent={
           <View style={styles.summary}>
             <Text style={styles.summaryTitle}>Order Summary</Text>
@@ -85,6 +120,13 @@ export default function CartScreen() {
               <Ionicons name="car-outline" size={16} color={colors.primary} />
               <Text style={styles.bannerText}>Orders confirmed Saturday, delivered fresh Sunday morning.</Text>
             </View>
+
+            {hasUnavailableItems && (
+              <View style={styles.warningCard}>
+                <Text style={styles.warningTitle}>Some items in your cart are currently unavailable.</Text>
+                <Text style={styles.warningText}>Please remove them to proceed with checkout.</Text>
+              </View>
+            )}
           </View>
         }
       />
@@ -94,7 +136,12 @@ export default function CartScreen() {
           <Text style={styles.checkoutLabel}>Total</Text>
           <Text style={styles.checkoutTotal}>₹{total}</Text>
         </View>
-        <Button title="Checkout" onPress={handleCheckout} style={{ width: 160 }} />
+        <Button
+          title="Checkout"
+          onPress={handleCheckout}
+          disabled={hasUnavailableItems}
+          style={{ width: 160 }}
+        />
       </View>
     </View>
   );
@@ -112,6 +159,46 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     gap: spacing.md,
     ...shadow.sm,
+  },
+  itemUnavailable: {
+    borderWidth: 1.5,
+    borderColor: "#F5C6CB",
+    backgroundColor: "#FFF5F5",
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  unavailableBadge: {
+    backgroundColor: "#FDE7E7",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+  },
+  unavailableBadgeText: {
+    color: colors.primary,
+    fontSize: 10,
+    fontFamily: typography.body.bold,
+  },
+  warningCard: {
+    backgroundColor: "#FDE7E7",
+    borderWidth: 1,
+    borderColor: "#F5C6CB",
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.md,
+  },
+  warningTitle: {
+    fontSize: 13,
+    fontFamily: typography.body.bold,
+    color: colors.primary,
+    marginBottom: 2,
+  },
+  warningText: {
+    fontSize: 12,
+    color: colors.text,
   },
   itemImage: { width: 56, height: 56, borderRadius: radius.sm, backgroundColor: colors.border },
   itemInfo: { flex: 1 },

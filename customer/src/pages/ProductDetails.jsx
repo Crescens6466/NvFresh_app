@@ -68,15 +68,18 @@ export default function ProductDetails() {
     );
   }
 
+  const isAvailable = product ? product.isAvailable !== false : true;
   const unitPrice = priceForWeight(product.price, weight);
   const totalPrice = unitPrice * qty;
 
   function handleAdd() {
+    if (!isAvailable) return;
     addToCart(product, weight, qty, unitPrice);
     showToast(`${product.name} added to cart`);
   }
 
   function handleBuyNow() {
+    if (!isAvailable) return;
     addToCart(product, weight, qty, unitPrice);
     navigate("/cart");
   }
@@ -88,7 +91,11 @@ export default function ProductDetails() {
           <HiArrowLeft />
         </button>
         <img src={resolveImageUrl(product.image)} alt={product.name} className="pd-image" />
-        {product.badge && <span className="badge pd-badge">{product.badge}</span>}
+        {!isAvailable ? (
+          <span className="badge pd-badge badge-not-available">Not Available</span>
+        ) : product.badge ? (
+          <span className="badge pd-badge">{product.badge}</span>
+        ) : null}
       </div>
 
       <div className="pd-body">
@@ -112,11 +119,19 @@ export default function ProductDetails() {
           <div className="pd-field">
             <label>Quantity</label>
             <div className="pd-qty">
-              <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease quantity">
+              <button
+                onClick={() => isAvailable && setQty((q) => Math.max(1, q - 1))}
+                aria-label="Decrease quantity"
+                disabled={!isAvailable}
+              >
                 <HiOutlineMinus />
               </button>
               <span>{qty}</span>
-              <button onClick={() => setQty((q) => q + 1)} aria-label="Increase quantity">
+              <button
+                onClick={() => isAvailable && setQty((q) => q + 1)}
+                aria-label="Increase quantity"
+                disabled={!isAvailable}
+              >
                 <HiOutlinePlus />
               </button>
             </div>
@@ -152,12 +167,20 @@ export default function ProductDetails() {
           <strong>₹{totalPrice}</strong>
         </div>
         <div className="pd-action-buttons">
-          <button className="btn btn-outline btn-block" onClick={handleAdd}>
-            Add To Cart
-          </button>
-          <button className="btn btn-primary btn-block" onClick={handleBuyNow}>
-            Buy Now
-          </button>
+          {isAvailable ? (
+            <>
+              <button className="btn btn-outline btn-block" onClick={handleAdd}>
+                Add To Cart
+              </button>
+              <button className="btn btn-primary btn-block" onClick={handleBuyNow}>
+                Buy Now
+              </button>
+            </>
+          ) : (
+            <button className="btn btn-block pd-btn-unavailable" disabled>
+              Currently Not Available
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -182,3 +182,41 @@
   opacity: 0.85;
   transform: none;
 }
+
+.cart-item-unavailable {
+  border: 1.5px solid #F5C6CB;
+  background: #FFF5F5;
+}
+
+.cart-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cart-item-unavailable-badge {
+  font-size: 0.62rem;
+  padding: 2px 7px;
+}
+
+.cart-unavailable-warning {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: #FDE7E7;
+  border: 1px solid #F5C6CB;
+  border-radius: var(--radius-sm);
+  color: var(--primary-red);
+}
+
+.cart-unavailable-warning strong {
+  display: block;
+  font-size: 0.88rem;
+  margin-bottom: 2px;
+}
+
+.cart-unavailable-warning p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.8rem;
+}

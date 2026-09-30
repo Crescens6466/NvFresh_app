@@ -14,6 +14,7 @@ const productSchema = new mongoose.Schema(
     },
     stock: { type: Number, default: 0 },
     badge: { type: String, default: null },
+    isAvailable: { type: Boolean, default: true },
   },
   { timestamps: { createdAt: "created_at", updatedAt: false } }
 );

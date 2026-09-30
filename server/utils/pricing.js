@@ -56,6 +56,9 @@ export async function computeOrderTotals(items) {
     if (!product) {
       throw new OrderValidationError(`Product not found: ${productId}`);
     }
+    if (product.isAvailable === false) {
+      throw new OrderValidationError(`"${product.name}" is currently unavailable. Please remove it from your cart to proceed.`);
+    }
     const qty = Math.max(1, Math.floor(Number(quantity) || 1));
     const unitPrice = priceForWeight(product.price, weight);
     return {

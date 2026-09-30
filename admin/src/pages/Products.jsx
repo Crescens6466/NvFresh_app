@@ -16,6 +16,7 @@ const emptyForm = {
   image: "",
   stock: "",
   badge: "",
+  isAvailable: true,
 };
 
 export default function Products() {
@@ -54,8 +55,25 @@ export default function Products() {
       image: product.image || "",
       stock: product.stock,
       badge: product.badge || "",
+      isAvailable: product.isAvailable !== false,
     });
     setModalOpen(true);
+  }
+
+  async function handleToggleAvailability(product) {
+    const nextAvailability = product.isAvailable === false ? true : false;
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, isAvailable: nextAvailability } : p))
+    );
+    try {
+      await api.updateProduct(product.id, { isAvailable: nextAvailability });
+      showToast(`"${product.name}" marked ${nextAvailability ? "Available" : "Not Available"}`);
+    } catch (err) {
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, isAvailable: product.isAvailable } : p))
+      );
+      showToast(err.message || "Failed to update availability", "error");
+    }
   }
 
   async function handleImageUpload(e) {
@@ -85,6 +103,7 @@ export default function Products() {
       stock: Number(form.stock) || 0,
       weights: DEFAULT_WEIGHTS,
       badge: form.badge || null,
+      isAvailable: form.isAvailable !== false,
     };
     try {
       if (editingId) {
@@ -152,6 +171,18 @@ export default function Products() {
                 <div className="product-admin-meta">
                   <span className="product-admin-price">₹{p.price}/kg</span>
                   <span className="product-admin-stock">Stock: {p.stock}</span>
+                </div>
+                <div className="product-admin-availability-row">
+                  <span className="product-admin-label">Availability:</span>
+                  <button
+                    type="button"
+                    className={`availability-toggle-btn ${p.isAvailable !== false ? "is-available" : "is-unavailable"}`}
+                    onClick={() => handleToggleAvailability(p)}
+                    title={`Click to mark ${p.isAvailable !== false ? "Not Available" : "Available"}`}
+                  >
+                    <span className="availability-dot" />
+                    {p.isAvailable !== false ? "Available" : "Not Available"}
+                  </button>
                 </div>
                 <div className="product-admin-actions">
                   <button className="btn btn-ghost" onClick={() => openEditModal(p)}>
@@ -262,6 +293,17 @@ export default function Products() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div className="field">
+                <label>Availability</label>
+                <select
+                  value={form.isAvailable ? "true" : "false"}
+                  onChange={(e) => setForm({ ...form, isAvailable: e.target.value === "true" })}
+                >
+                  <option value="true">Available</option>
+                  <option value="false">Not Available</option>
+                </select>
               </div>
             </div>
 

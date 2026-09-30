@@ -20,16 +20,19 @@ export default function ProductCard({ product }) {
   const { addToCart } = useCart();
   const { showToast } = useToast();
 
+  const isAvailable = product.isAvailable !== false;
   const displayPrice = priceForWeight(product.price, weight);
 
   function handleAdd(e) {
     e.stopPropagation();
+    if (!isAvailable) return;
     addToCart(product, weight, 1, displayPrice);
     showToast(`${product.name} added to cart`);
   }
 
   function handleBuyNow(e) {
     e.stopPropagation();
+    if (!isAvailable) return;
     addToCart(product, weight, 1, displayPrice);
     navigate("/cart");
   }
@@ -38,11 +41,15 @@ export default function ProductCard({ product }) {
     <div className="product-card" onClick={() => navigate(`/product/${product.id}`)}>
       <div className="product-card-image-wrap">
         <img src={resolveImageUrl(product.image)} alt={product.name} className="product-card-image" loading="lazy" />
-        {product.badge && (
+        {!isAvailable ? (
+          <span className="badge product-card-badge badge-not-available">
+            Not Available
+          </span>
+        ) : product.badge ? (
           <span className={`badge product-card-badge ${badgeClass[product.badge] || ""}`}>
             {product.badge}
           </span>
-        )}
+        ) : null}
         <button
           className="product-card-wishlist"
           onClick={(e) => {
@@ -76,12 +83,25 @@ export default function ProductCard({ product }) {
         </select>
 
         <div className="product-card-actions">
-          <button className="btn btn-outline product-card-btn" onClick={handleAdd}>
-            Add
-          </button>
-          <button className="btn btn-primary product-card-btn" onClick={handleBuyNow}>
-            Buy Now
-          </button>
+          {isAvailable ? (
+            <>
+              <button className="btn btn-outline product-card-btn" onClick={handleAdd}>
+                Add
+              </button>
+              <button className="btn btn-primary product-card-btn" onClick={handleBuyNow}>
+                Buy Now
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="btn product-card-btn btn-unavailable"
+              disabled
+              onClick={(e) => e.stopPropagation()}
+            >
+              Not Available
+            </button>
+          )}
         </div>
       </div>
     </div>

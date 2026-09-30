@@ -38,6 +38,7 @@ export default function Payment() {
   // trusting a frontend-calculated number.
   const [quote, setQuote] = useState(null);
   const [quoteLoading, setQuoteLoading] = useState(true);
+  const [quoteError, setQuoteError] = useState("");
   // Pre-fill from a saved profile (faster checkout for returning customers) —
   // still fully editable.
   const [form, setForm] = useState({
@@ -76,6 +77,7 @@ export default function Payment() {
     if (items.length === 0 || authLoading || !isLoggedIn) return;
     let cancelled = false;
     setQuoteLoading(true);
+    setQuoteError("");
     getIdToken()
       .then((token) =>
         api.getOrderQuote(
@@ -85,10 +87,17 @@ export default function Payment() {
         )
       )
       .then((q) => {
-        if (!cancelled) setQuote(q);
+        if (!cancelled) {
+          setQuote(q);
+          setQuoteError("");
+        }
       })
       .catch((err) => {
-        if (!cancelled) showToast(err.message || "Could not calculate payment amount", "error");
+        if (!cancelled) {
+          setQuote(null);
+          setQuoteError(err.message || "Could not calculate payment amount");
+          showToast(err.message || "Could not calculate payment amount", "error");
+        }
       })
       .finally(() => {
         if (!cancelled) setQuoteLoading(false);
@@ -156,6 +165,20 @@ export default function Payment() {
         <HiOutlineTruck />
         <span>Orders confirmed Saturday, delivered fresh Sunday morning.</span>
       </div>
+
+      {quoteError && (
+        <div className="cart-unavailable-warning" style={{ marginBottom: 16 }}>
+          <strong>{quoteError}</strong>
+          <button
+            type="button"
+            className="btn btn-outline"
+            style={{ marginTop: 8, padding: "6px 14px", fontSize: "0.8rem" }}
+            onClick={() => navigate("/cart")}
+          >
+            Return to Cart
+          </button>
+        </div>
+      )}
 
       <div className="payment-amount-card">
         <div className="payment-amount-row">

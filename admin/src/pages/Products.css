@@ -70,6 +70,62 @@
   color: var(--text-muted);
 }
 
+.product-admin-availability-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+.product-admin-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.availability-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.availability-toggle-btn.is-available {
+  background: var(--success-bg);
+  color: var(--success);
+  border-color: rgba(46, 125, 50, 0.25);
+}
+
+.availability-toggle-btn.is-available:hover {
+  background: #d0f0d6;
+}
+
+.availability-toggle-btn.is-unavailable {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-color: rgba(198, 40, 40, 0.25);
+}
+
+.availability-toggle-btn.is-unavailable:hover {
+  background: #fbd3d3;
+}
+
+.availability-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
 .product-admin-actions {
   display: flex;
   gap: 8px;

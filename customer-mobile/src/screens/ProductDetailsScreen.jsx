@@ -64,15 +64,18 @@ export default function ProductDetailsScreen({ route }) {
     );
   }
 
+  const isAvailable = product ? product.isAvailable !== false : true;
   const unitPrice = priceForWeight(product.price, weight);
   const totalPrice = unitPrice * qty;
 
   function handleAdd() {
+    if (!isAvailable) return;
     addToCart(product, weight, qty, unitPrice);
     showToast(`${product.name} added to cart`);
   }
 
   function handleBuyNow() {
+    if (!isAvailable) return;
     addToCart(product, weight, qty, unitPrice);
     navigation.navigate("Main", { screen: "Cart" });
   }
@@ -85,11 +88,15 @@ export default function ProductDetailsScreen({ route }) {
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <Image source={{ uri: resolveImageUrl(product.image) }} style={styles.image} />
-          {product.badge && (
+          {!isAvailable ? (
+            <View style={[styles.badge, { backgroundColor: colors.danger || "#C62828" }]}>
+              <Text style={styles.badgeText}>Not Available</Text>
+            </View>
+          ) : product.badge ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{product.badge}</Text>
             </View>
-          )}
+          ) : null}
         </View>
 
         <View style={styles.body}>
@@ -107,11 +114,19 @@ export default function ProductDetailsScreen({ route }) {
             <View style={styles.field}>
               <Text style={styles.label}>Quantity</Text>
               <View style={styles.qtyRow}>
-                <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty((q) => Math.max(1, q - 1))}>
+                <TouchableOpacity
+                  style={[styles.qtyBtn, !isAvailable && { opacity: 0.5 }]}
+                  disabled={!isAvailable}
+                  onPress={() => setQty((q) => Math.max(1, q - 1))}
+                >
                   <Ionicons name="remove" size={16} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.qtyText}>{qty}</Text>
-                <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty((q) => q + 1)}>
+                <TouchableOpacity
+                  style={[styles.qtyBtn, !isAvailable && { opacity: 0.5 }]}
+                  disabled={!isAvailable}
+                  onPress={() => setQty((q) => q + 1)}
+                >
                   <Ionicons name="add" size={16} color={colors.text} />
                 </TouchableOpacity>
               </View>
@@ -151,8 +166,19 @@ export default function ProductDetailsScreen({ route }) {
           <Text style={styles.actionTotal}>₹{totalPrice}</Text>
         </View>
         <View style={styles.actionButtons}>
-          <Button title="Add To Cart" variant="outline" onPress={handleAdd} style={{ flex: 1 }} />
-          <Button title="Buy Now" onPress={handleBuyNow} style={{ flex: 1 }} />
+          {isAvailable ? (
+            <>
+              <Button title="Add To Cart" variant="outline" onPress={handleAdd} style={{ flex: 1 }} />
+              <Button title="Buy Now" onPress={handleBuyNow} style={{ flex: 1 }} />
+            </>
+          ) : (
+            <Button
+              title="Currently Not Available"
+              variant="ghost"
+              disabled
+              style={{ flex: 1, backgroundColor: "#F0DFD9", borderWidth: 1, borderColor: "#E0CCC5" }}
+            />
+          )}
         </View>
       </View>
     </View>

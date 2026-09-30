@@ -23,6 +23,7 @@ export default function PaymentScreen() {
   const [advancePercentage, setAdvancePercentage] = useState(25);
   const [quote, setQuote] = useState(null);
   const [quoteLoading, setQuoteLoading] = useState(true);
+  const [quoteError, setQuoteError] = useState("");
   const [form, setForm] = useState({
     name: profile?.name || "",
     phone: profile?.phone || "",
@@ -47,6 +48,7 @@ export default function PaymentScreen() {
     if (items.length === 0 || authLoading || !isLoggedIn) return;
     let cancelled = false;
     setQuoteLoading(true);
+    setQuoteError("");
     getIdToken()
       .then((token) =>
         api.getOrderQuote(
@@ -56,10 +58,17 @@ export default function PaymentScreen() {
         )
       )
       .then((q) => {
-        if (!cancelled) setQuote(q);
+        if (!cancelled) {
+          setQuote(q);
+          setQuoteError("");
+        }
       })
       .catch((err) => {
-        if (!cancelled) showToast(err.message || "Could not calculate payment amount", "error");
+        if (!cancelled) {
+          setQuote(null);
+          setQuoteError(err.message || "Could not calculate payment amount");
+          showToast(err.message || "Could not calculate payment amount", "error");
+        }
       })
       .finally(() => {
         if (!cancelled) setQuoteLoading(false);
@@ -122,6 +131,19 @@ export default function PaymentScreen() {
           <Ionicons name="car-outline" size={16} color={colors.primary} />
           <Text style={styles.bannerText}>Orders confirmed Saturday, delivered fresh Sunday morning.</Text>
         </View>
+
+        {quoteError ? (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorTitle}>Ordering Unavailable</Text>
+            <Text style={styles.errorText}>{quoteError}</Text>
+            <Button
+              title="Return to Cart"
+              variant="outline"
+              onPress={() => navigation.navigate("Main", { screen: "Cart" })}
+              style={{ marginTop: spacing.sm }}
+            />
+          </View>
+        ) : null}
 
         <View style={styles.card}>
           <View style={styles.row}>
@@ -219,6 +241,24 @@ const styles = StyleSheet.create({
   noticeText: { fontSize: 12, color: colors.primaryDark, fontWeight: "600" },
   banner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FFF1EC", padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.lg },
   bannerText: { flex: 1, fontSize: 11, color: colors.primaryDark, fontWeight: "600" },
+  errorCard: {
+    backgroundColor: "#FDE7E7",
+    borderWidth: 1,
+    borderColor: "#F5C6CB",
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorTitle: {
+    fontSize: 13,
+    fontFamily: typography.body.bold,
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  errorText: {
+    fontSize: 12,
+    color: colors.text,
+  },
   card: { backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.lg, ...shadow.sm },
   row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6 },
   rowHighlight: { marginTop: spacing.sm },

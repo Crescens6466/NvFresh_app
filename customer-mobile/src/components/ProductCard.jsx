@@ -23,14 +23,17 @@ export default function ProductCard({ product }) {
   const { addToCart } = useCart();
   const { showToast } = useToast();
 
+  const isAvailable = product.isAvailable !== false;
   const displayPrice = priceForWeight(product.price, weight);
 
   function handleAdd() {
+    if (!isAvailable) return;
     addToCart(product, weight, 1, displayPrice);
     showToast(`${product.name} added to cart`);
   }
 
   function handleBuyNow() {
+    if (!isAvailable) return;
     addToCart(product, weight, 1, displayPrice);
     navigation.navigate("Main", { screen: "Cart" });
   }
@@ -43,11 +46,15 @@ export default function ProductCard({ product }) {
     >
       <View style={styles.imageWrap}>
         <Image source={{ uri: resolveImageUrl(product.image) }} style={styles.image} />
-        {product.badge && (
+        {!isAvailable ? (
+          <View style={[styles.badge, { backgroundColor: colors.danger || "#C62828" }]}>
+            <Text style={styles.badgeText}>Not Available</Text>
+          </View>
+        ) : product.badge ? (
           <View style={[styles.badge, { backgroundColor: BADGE_COLOR[product.badge] || colors.primary }]}>
             <Text style={styles.badgeText}>{product.badge}</Text>
           </View>
-        )}
+        ) : null}
         <TouchableOpacity
           style={styles.wishlist}
           onPress={(e) => {
@@ -69,12 +76,20 @@ export default function ProductCard({ product }) {
         <WeightSelector options={product.weights} value={weight} onChange={setWeight} size="sm" />
 
         <View style={styles.actions}>
-          <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={handleAdd}>
-            <Text style={styles.btnOutlineText}>Add</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, styles.btnPrimary]} onPress={handleBuyNow}>
-            <Text style={styles.btnPrimaryText}>Buy Now</Text>
-          </TouchableOpacity>
+          {isAvailable ? (
+            <>
+              <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={handleAdd}>
+                <Text style={styles.btnOutlineText}>Add</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.btn, styles.btnPrimary]} onPress={handleBuyNow}>
+                <Text style={styles.btnPrimaryText}>Buy Now</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={[styles.btn, styles.btnDisabled]}>
+              <Text style={styles.btnDisabledText}>Not Available</Text>
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -121,4 +136,6 @@ const styles = StyleSheet.create({
   btnOutlineText: { color: colors.primary, fontFamily: typography.body.bold, fontSize: 12 },
   btnPrimary: { backgroundColor: colors.primary, ...shadow.sm },
   btnPrimaryText: { color: colors.white, fontFamily: typography.body.bold, fontSize: 12 },
+  btnDisabled: { backgroundColor: "#F0DFD9", borderWidth: 1, borderColor: "#E0CCC5" },
+  btnDisabledText: { color: colors.textMuted, fontFamily: typography.body.bold, fontSize: 12 },
 });

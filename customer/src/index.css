@@ -205,6 +205,12 @@ img {
   color: var(--primary);
 }
 
+.badge-not-available {
+  background: #FDE7E7;
+  color: var(--primary-red);
+  font-weight: 800;
+}
+
 /* Empty state */
 .empty-state {
   display: flex;

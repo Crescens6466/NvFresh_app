@@ -206,3 +206,11 @@
   display: flex;
   gap: 10px;
 }
+
+.pd-btn-unavailable {
+  background: #F0DFD9 !important;
+  color: var(--text-muted) !important;
+  border: 1px solid #E0CCC5 !important;
+  cursor: not-allowed !important;
+  opacity: 0.85;
+}

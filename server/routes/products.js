@@ -40,7 +40,7 @@ router.get("/:id", async (req, res, next) => {
 // POST /api/products — create (admin only)
 router.post("/", requireAuth, async (req, res, next) => {
   try {
-    const { name, description, price, category, image, weights, stock, badge } = req.body;
+    const { name, description, price, category, image, weights, stock, badge, isAvailable } = req.body;
     if (!name || !price || !category) {
       return res.status(400).json({ error: "name, price, and category are required" });
     }
@@ -53,6 +53,7 @@ router.post("/", requireAuth, async (req, res, next) => {
       weights: weights && weights.length ? weights : undefined,
       stock: stock || 0,
       badge: badge || null,
+      isAvailable: isAvailable !== undefined ? Boolean(isAvailable) : true,
     });
     res.status(201).json(toClient(product));
   } catch (err) {
@@ -63,7 +64,7 @@ router.post("/", requireAuth, async (req, res, next) => {
 // PUT /api/products/:id — update (admin only)
 router.put("/:id", requireAuth, async (req, res, next) => {
   try {
-    const { name, description, price, category, image, weights, stock, badge } = req.body;
+    const { name, description, price, category, image, weights, stock, badge, isAvailable } = req.body;
     const update = {};
     if (name !== undefined) update.name = name;
     if (description !== undefined) update.description = description;
@@ -73,6 +74,7 @@ router.put("/:id", requireAuth, async (req, res, next) => {
     if (weights && weights.length) update.weights = weights;
     if (stock !== undefined) update.stock = stock;
     if (badge !== undefined) update.badge = badge;
+    if (isAvailable !== undefined) update.isAvailable = Boolean(isAvailable);
 
     const product = await Product.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!product) return res.status(404).json({ error: "Product not found" });

@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HiOutlineMinus, HiOutlinePlus, HiOutlineTrash, HiOutlineShoppingCart, HiOutlineTruck } from "react-icons/hi2";
 import { useCart } from "../context/CartContext.jsx";
 import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
-import { resolveImageUrl } from "../api.js";
+import { api, resolveImageUrl } from "../api.js";
 import "./Cart.css";
 
 export default function Cart() {
@@ -11,7 +11,32 @@ export default function Cart() {
   const { isLoggedIn } = useCustomerAuth();
   const navigate = useNavigate();
 
+  const [unavailableProductIds, setUnavailableProductIds] = useState(new Set());
+
+  useEffect(() => {
+    if (items.length === 0) return;
+    let cancelled = false;
+    api
+      .getProducts()
+      .then((products) => {
+        if (cancelled) return;
+        const unavailable = new Set(
+          products.filter((p) => p.isAvailable === false).map((p) => String(p.id))
+        );
+        setUnavailableProductIds(unavailable);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [items]);
+
+  const hasUnavailableItems = items.some((item) =>
+    unavailableProductIds.has(String(item.productId))
+  );
+
   function handleCheckout() {
+    if (hasUnavailableItems) return;
     if (isLoggedIn) {
       navigate("/payment");
     } else {
@@ -37,34 +62,44 @@ export default function Cart() {
       <h2 className="cart-title">Your Cart</h2>
 
       <div className="cart-list">
-        {items.map((item) => (
-          <div className="cart-item" key={item.key}>
-            <img src={resolveImageUrl(item.image)} alt={item.name} className="cart-item-image" />
-            <div className="cart-item-info">
-              <h4>{item.name}</h4>
-              <p className="cart-item-weight">{item.weight}</p>
-              <p className="cart-item-price">₹{item.price * item.quantity}</p>
-            </div>
-            <div className="cart-item-actions">
-              <button
-                className="cart-item-remove"
-                onClick={() => removeFromCart(item.key)}
-                aria-label="Remove item"
-              >
-                <HiOutlineTrash />
-              </button>
-              <div className="cart-item-stepper">
-                <button onClick={() => updateQuantity(item.key, item.quantity - 1)}>
-                  <HiOutlineMinus />
+        {items.map((item) => {
+          const isItemUnavailable = unavailableProductIds.has(String(item.productId));
+          return (
+            <div className={`cart-item ${isItemUnavailable ? "cart-item-unavailable" : ""}`} key={item.key}>
+              <img src={resolveImageUrl(item.image)} alt={item.name} className="cart-item-image" />
+              <div className="cart-item-info">
+                <div className="cart-item-title-row">
+                  <h4>{item.name}</h4>
+                  {isItemUnavailable && (
+                    <span className="badge badge-not-available cart-item-unavailable-badge">
+                      Unavailable
+                    </span>
+                  )}
+                </div>
+                <p className="cart-item-weight">{item.weight}</p>
+                <p className="cart-item-price">₹{item.price * item.quantity}</p>
+              </div>
+              <div className="cart-item-actions">
+                <button
+                  className="cart-item-remove"
+                  onClick={() => removeFromCart(item.key)}
+                  aria-label="Remove item"
+                >
+                  <HiOutlineTrash />
                 </button>
-                <span>{item.quantity}</span>
-                <button onClick={() => updateQuantity(item.key, item.quantity + 1)}>
-                  <HiOutlinePlus />
-                </button>
+                <div className="cart-item-stepper">
+                  <button onClick={() => updateQuantity(item.key, item.quantity - 1)}>
+                    <HiOutlineMinus />
+                  </button>
+                  <span>{item.quantity}</span>
+                  <button onClick={() => updateQuantity(item.key, item.quantity + 1)}>
+                    <HiOutlinePlus />
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="cart-summary">
@@ -89,12 +124,23 @@ export default function Cart() {
         <span>Orders confirmed Saturday, delivered fresh Sunday morning.</span>
       </div>
 
+      {hasUnavailableItems && (
+        <div className="cart-unavailable-warning">
+          <strong>Some items in your cart are currently unavailable.</strong>
+          <p>Please remove them from your cart to proceed with checkout.</p>
+        </div>
+      )}
+
       <div className="cart-checkout-bar">
         <div>
           <p className="cart-checkout-label">Total</p>
           <p className="cart-checkout-total">₹{total}</p>
         </div>
-        <button className="btn btn-primary cart-checkout-button" onClick={handleCheckout}>
+        <button
+          className="btn btn-primary cart-checkout-button"
+          onClick={handleCheckout}
+          disabled={hasUnavailableItems}
+        >
           Checkout
         </button>
       </div>
