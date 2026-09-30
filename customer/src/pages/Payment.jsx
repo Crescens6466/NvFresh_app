@@ -4,26 +4,10 @@ import { HiArrowLeft, HiOutlineQrCode, HiOutlineTruck } from "react-icons/hi2";
 import { useCart } from "../context/CartContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
-import { api } from "../api.js";
+import { api, resolveImageUrl } from "../api.js";
 import "./Payment.css";
 
 const ADVANCE_OPTIONS = [25, 50, 75, 100];
-const PHONEPE_TEST_MODE = true;
-
-function getMobilePaymentUrl(upiUrl) {
-  if (!upiUrl || typeof navigator === "undefined") return upiUrl;
-
-  const isAndroidMobile = /Android/i.test(navigator.userAgent)
-    && /Mobile/i.test(navigator.userAgent);
-  if (!PHONEPE_TEST_MODE || !isAndroidMobile || !upiUrl.startsWith("upi://pay?")) {
-    return upiUrl;
-  }
-
-  const phonePeUrl = upiUrl.replace(/^upi:\/\/pay\?/, "phonepe://pay?");
-  if (phonePeUrl === upiUrl || phonePeUrl.includes("#")) return upiUrl;
-
-  return phonePeUrl;
-}
 
 export default function Payment() {
   const { items, clearCart } = useCart();
@@ -32,10 +16,12 @@ export default function Payment() {
   const { profile, isLoggedIn, loading: authLoading, getIdToken } = useCustomerAuth();
 
   const [settings, setSettings] = useState(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [qrLoadFailed, setQrLoadFailed] = useState(false);
   const [advancePercentage, setAdvancePercentage] = useState(25);
-  // Every amount shown (total, advance, remaining) and the QR itself come
-  // from this — the backend recomputes totals from the database, never
-  // trusting a frontend-calculated number.
+  // Every amount shown (total, advance, remaining) comes from quote —
+  // the backend recomputes totals from the database, never trusting a
+  // frontend-calculated number.
   const [quote, setQuote] = useState(null);
   const [quoteLoading, setQuoteLoading] = useState(true);
   const [quoteError, setQuoteError] = useState("");
@@ -48,13 +34,6 @@ export default function Payment() {
     transactionId: "",
   });
   const [submitting, setSubmitting] = useState(false);
-  const mobilePaymentUrl = getMobilePaymentUrl(quote?.upiUrl);
-
-  useEffect(() => {
-    if (import.meta.env.DEV && mobilePaymentUrl?.startsWith("phonepe://pay?")) {
-      console.log("[payment] PhonePe test URL generated:", mobilePaymentUrl);
-    }
-  }, [mobilePaymentUrl]);
 
   useEffect(() => {
     if (items.length === 0) {
@@ -67,7 +46,14 @@ export default function Payment() {
       navigate("/login", { state: { from: "/payment" } });
       return;
     }
-    api.getSettings().then(setSettings).catch(() => {});
+    setSettingsLoading(true);
+    api.getSettings()
+      .then((s) => {
+        setSettings(s);
+        setQrLoadFailed(false);
+      })
+      .catch(() => {})
+      .finally(() => setSettingsLoading(false));
   }, [authLoading, isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetches the quote (totals + dynamic QR) whenever the advance % changes
@@ -221,30 +207,46 @@ export default function Payment() {
       </div>
 
       <div className="payment-qr-card">
-        <a
-          className={`payment-qr-box ${quote?.qrDataUrl ? "has-image" : ""} ${quote?.upiUrl ? "is-tappable" : ""}`}
-          href={quote?.upiUrl || undefined}
-          aria-disabled={!quote?.upiUrl}
-          onClick={(e) => { if (!quote?.upiUrl) e.preventDefault(); }}
-        >
-          {quote?.qrDataUrl ? (
-            <img src={quote.qrDataUrl} alt="Payment QR code" className="payment-qr-image" />
-          ) : (
-            <HiOutlineQrCode />
-          )}
-        </a>
-        <p className="payment-qr-label">
-          Scan to pay {quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`} via any UPI app
-        </p>
-        {quote?.upiUrl ? (
-          <a className="payment-upi payment-upi-link" href={mobilePaymentUrl}>
-            {settings?.upi_id || "nvfresh@upi"}
-            <span className="payment-upi-hint">Tap to pay in your UPI app</span>
-          </a>
+        <div className="payment-qr-amount-section">
+          <span className="payment-qr-amount-label">Payment Amount</span>
+          <div className="payment-qr-amount-value">
+            {quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`}
+          </div>
+        </div>
+
+        {settingsLoading ? (
+          <div className="payment-qr-box is-loading">
+            <span className="payment-qr-loading-text">Loading QR...</span>
+          </div>
+        ) : settings?.qr_image && !qrLoadFailed ? (
+          <>
+            <div className="payment-qr-box has-image">
+              <img
+                src={resolveImageUrl(settings.qr_image)}
+                alt="Payment QR Code"
+                className="payment-qr-image"
+                onError={() => setQrLoadFailed(true)}
+              />
+            </div>
+            <p className="payment-qr-instruction">
+              Screenshot this QR and make the payment using your preferred UPI app.
+            </p>
+          </>
         ) : (
-          <p className="payment-upi">{settings?.upi_id || "nvfresh@upi"}</p>
+          <div className="payment-qr-fallback">
+            <HiOutlineQrCode className="payment-qr-fallback-icon" />
+            <p className="payment-qr-fallback-text">
+              Payment QR is currently unavailable. Please contact support.
+            </p>
+          </div>
         )}
-        <p className="payment-phone">Or pay to: {settings?.phone_number || "+91 98765 43210"}</p>
+
+        {settings?.upi_id && (
+          <p className="payment-upi">{settings.upi_id}</p>
+        )}
+        {settings?.phone_number && (
+          <p className="payment-phone">Or pay to: {settings.phone_number}</p>
+        )}
       </div>
 
       <form className="payment-form" onSubmit={handleSubmit}>
