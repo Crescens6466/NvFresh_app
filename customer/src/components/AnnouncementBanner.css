@@ -1,16 +1,16 @@
 .announcement-banner {
   position: relative;
   z-index: 10;
-  background: var(--primary);
-  color: #ffffff;
+  background: #FFF3CD;
+  color: #B91C1C;
   overflow: hidden;
   white-space: nowrap;
   font-family: var(--font-body);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.01em;
-  padding: 7px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(185, 28, 28, 0.12);
   user-select: none;
   width: 100%;
 }
@@ -43,9 +43,10 @@
 }
 
 .announcement-dot {
-  color: var(--accent);
+  color: #B91C1C;
   margin: 0 16px;
   font-size: 0.75rem;
+  opacity: 0.85;
 }
 
 @keyframes announcement-scroll {

@@ -78,12 +78,12 @@ export default function AnnouncementBanner() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.primary,
+    backgroundColor: "#FFF3CD",
     overflow: "hidden",
-    height: 30,
+    height: 32,
     justifyContent: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#B71C1C",
+    borderBottomColor: "rgba(185, 28, 28, 0.12)",
   },
   track: {
     flexDirection: "row",
@@ -98,15 +98,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   text: {
-    color: colors.white,
+    color: "#B91C1C",
     fontSize: 12,
-    fontFamily: typography.body.semibold,
+    fontFamily: typography.body.bold,
     letterSpacing: 0.1,
   },
   dot: {
-    color: colors.accent,
+    color: "#B91C1C",
     fontSize: 12,
     marginHorizontal: 16,
+    opacity: 0.85,
   },
 });
 
