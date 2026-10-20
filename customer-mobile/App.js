@@ -21,6 +21,7 @@ import { navigationRef } from "./src/navigation/navigationRef.js";
 import { flushPendingNotificationNavigation } from "./src/navigation/notificationNavigation.js";
 import RootNavigator from "./src/navigation/RootNavigator.jsx";
 import AppHeader from "./src/components/AppHeader.jsx";
+import AnnouncementBanner from "./src/components/AnnouncementBanner.jsx";
 import { colors } from "./src/theme.js";
 
 // Match the website's default body font everywhere a Text/TextInput doesn't
@@ -57,6 +58,7 @@ export default function App() {
             <CustomerNotificationsProvider>
               <NavigationContainer ref={navigationRef} onReady={flushPendingNotificationNavigation}>
                 <AppHeader />
+                <AnnouncementBanner />
                 <RootNavigator />
               </NavigationContainer>
             </CustomerNotificationsProvider>

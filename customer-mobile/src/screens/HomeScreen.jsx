@@ -1,11 +1,11 @@
-// HomeScreen.jsx — ported from customer/src/pages/Home.jsx.
 import React, { useEffect, useState } from "react";
-import { FlatList, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../api.js";
 import ProductCard from "../components/ProductCard.jsx";
 import { ProductGridSkeleton } from "../components/Skeleton.jsx";
 import EmptyState from "../components/EmptyState.jsx";
+import Button from "../components/Button.jsx";
 import { colors, radius, shadow, spacing, typography } from "../theme.js";
 
 const CATEGORIES = ["All", "Chicken", "Mutton", "Fish", "Seafood", "Country Chicken"];
@@ -13,6 +13,8 @@ const CATEGORIES = ["All", "Chicken", "Mutton", "Fish", "Seafood", "Country Chic
 export default function HomeScreen({ route }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [category, setCategory] = useState(route.params?.category || "All");
   const [search, setSearch] = useState("");
 
@@ -22,17 +24,37 @@ export default function HomeScreen({ route }) {
     if (route.params?.category) setCategory(route.params.category);
   }, [route.params?.category]);
 
+  function loadProducts(showSkeleton = true) {
+    if (showSkeleton) setLoading(true);
+    setError(null);
+    api
+      .getProducts({ category, search })
+      .then((data) => {
+        setProducts(Array.isArray(data) ? data : []);
+        setError(null);
+      })
+      .catch((err) => {
+        console.warn("[HomeScreen] Failed to load products:", err?.message || err);
+        setProducts([]);
+        setError(err?.message || "Could not load products");
+      })
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
+  }
+
   useEffect(() => {
-    setLoading(true);
     const timer = setTimeout(() => {
-      api
-        .getProducts({ category, search })
-        .then(setProducts)
-        .catch(() => setProducts([]))
-        .finally(() => setLoading(false));
+      loadProducts(true);
     }, 200);
     return () => clearTimeout(timer);
   }, [category, search]);
+
+  function handleRefresh() {
+    setRefreshing(true);
+    loadProducts(false);
+  }
 
   const ListHeader = (
     <View>
@@ -100,14 +122,34 @@ export default function HomeScreen({ route }) {
 
   if (!loading && products.length === 0) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.bg }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[colors.primary]} />
+        }
+      >
         {ListHeader}
-        <EmptyState
-          icon={<Ionicons name="file-tray-outline" size={40} color={colors.textMuted} />}
-          title="No products found"
-          message="Try a different category or search term."
-        />
-      </View>
+        {error ? (
+          <EmptyState
+            icon={<Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />}
+            title="Could not load products"
+            message="Please check your internet connection or tap retry below."
+          >
+            <Button
+              title="Retry"
+              variant="outline"
+              onPress={() => loadProducts(true)}
+              style={{ marginTop: spacing.md, minWidth: 140 }}
+            />
+          </EmptyState>
+        ) : (
+          <EmptyState
+            icon={<Ionicons name="file-tray-outline" size={40} color={colors.textMuted} />}
+            title="No products found"
+            message="Try a different category or search term."
+          />
+        )}
+      </ScrollView>
     );
   }
 
@@ -120,6 +162,9 @@ export default function HomeScreen({ route }) {
       columnWrapperStyle={{ gap: 12, paddingHorizontal: spacing.lg }}
       contentContainerStyle={{ gap: 12, paddingBottom: 24 }}
       ListHeaderComponent={ListHeader}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[colors.primary]} />
+      }
       renderItem={({ item }) => <ProductCard product={item} />}
     />
   );

@@ -18,11 +18,20 @@ import { sendMsg91Otp, retryMsg91Otp, verifyMsg91Otp } from "../services/msg91Ot
 import { unregisterCurrentAndroidDeviceToken } from "../services/customerNotifications.js";
 
 const CustomerAuthContext = createContext(null);
-const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+const DEFAULT_GOOGLE_WEB_CLIENT_ID = "725533349098-2t144i5kjg9n4rdr1p0ojbfgtcpkhn93.apps.googleusercontent.com";
+const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || DEFAULT_GOOGLE_WEB_CLIENT_ID;
 
-GoogleSignin.configure({
-  webClientId: googleWebClientId,
-});
+function configureGoogleSignIn() {
+  if (googleWebClientId) {
+    try {
+      GoogleSignin.configure({
+        webClientId: googleWebClientId,
+      });
+    } catch (err) {
+      console.warn("[CustomerAuthContext] GoogleSignin.configure error:", err);
+    }
+  }
+}
 
 // Phone sign-in doesn't use Firebase at all (avoids its paid-billing
 // requirement for SMS) — the backend sends an OTP via SMS (SMSGate) and,
@@ -34,6 +43,10 @@ export function CustomerAuthProvider({ children }) {
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [phoneSession, setPhoneSession] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    configureGoogleSignIn();
+  }, []);
 
   useEffect(() => {
     AsyncStorage.getItem(PHONE_SESSION_KEY)
@@ -65,8 +78,21 @@ export function CustomerAuthProvider({ children }) {
     if (!googleWebClientId) {
       throw new Error("Google sign-in isn't set up yet — please check back soon.");
     }
+    configureGoogleSignIn();
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-    const result = await GoogleSignin.signIn();
+    let result;
+    try {
+      result = await GoogleSignin.signIn();
+    } catch (err) {
+      if (err?.code === "12501" || err?.message?.includes("cancelled")) {
+        throw new Error("Sign-in was cancelled");
+      }
+      if (err?.code === "10" || String(err?.message || "").includes("10")) {
+        throw new Error("Google Sign-In configuration error (Code 10). Ensure the EAS build SHA-1 fingerprint is added to Firebase Console.");
+      }
+      throw err;
+    }
+
     if (result?.type !== "success" || !result.data?.idToken) {
       if (result?.type === "cancelled") {
         throw new Error("Sign-in was cancelled");

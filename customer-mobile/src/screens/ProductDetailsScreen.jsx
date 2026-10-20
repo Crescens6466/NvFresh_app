@@ -37,7 +37,11 @@ export default function ProductDetailsScreen({ route }) {
       .getProduct(productId)
       .then((p) => {
         setProduct(p);
-        setWeight(p.weights[1] || p.weights[0]);
+        setWeight(p?.weights?.[1] || p?.weights?.[0] || "1 kg");
+      })
+      .catch((err) => {
+        console.warn("[ProductDetailsScreen] Failed to load product:", err?.message || err);
+        setProduct(null);
       })
       .finally(() => setLoading(false));
   }, [productId]);

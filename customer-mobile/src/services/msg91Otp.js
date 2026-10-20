@@ -3,9 +3,12 @@ import { OTPWidget } from "@msg91comm/sendotp-react-native";
 let initializationPromise = null;
 let currentReqId = null;
 
+const DEFAULT_MSG91_WIDGET_ID = "36696568466c393032313039";
+const DEFAULT_MSG91_TOKEN_AUTH = "565521T4ixpmndRpa6a98f99eP1";
+
 function getConfig() {
-  const widgetId = process.env.EXPO_PUBLIC_MSG91_WIDGET_ID;
-  const tokenAuth = process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH;
+  const widgetId = process.env.EXPO_PUBLIC_MSG91_WIDGET_ID || DEFAULT_MSG91_WIDGET_ID;
+  const tokenAuth = process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH || DEFAULT_MSG91_TOKEN_AUTH;
 
   if (!widgetId || !tokenAuth) {
     throw new Error("Phone sign-in isn't set up yet — please check back soon.");

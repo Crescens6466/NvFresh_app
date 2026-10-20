@@ -17,7 +17,7 @@ const BADGE_COLOR = {
 };
 
 export default function ProductCard({ product }) {
-  const [weight, setWeight] = useState(product.weights[1] || product.weights[0]);
+  const [weight, setWeight] = useState(product?.weights?.[1] || product?.weights?.[0] || "1 kg");
   const [liked, setLiked] = useState(false);
   const navigation = useNavigation();
   const { addToCart } = useCart();

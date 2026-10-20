@@ -7,7 +7,8 @@
 // EXPO_PUBLIC_API_URL must always be an absolute URL — either the deployed
 // backend, or your machine's LAN IP (e.g. http://192.168.1.20:5000/api) when
 // testing against a local server/ instance from a device or emulator.
-const BASE = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
+const DEFAULT_API_URL = "https://nv-fresh-app-x1mc.vercel.app/api";
+const BASE = (process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL).replace(/\/+$/, "");
 const API_ORIGIN = BASE.replace(/\/api\/?$/, "");
 
 // Product/QR images come back as paths relative to the backend (e.g.
@@ -20,18 +21,26 @@ export function resolveImageUrl(path) {
 }
 
 async function request(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Request failed" }));
-    throw new Error(err.error || "Request failed");
+  const url = `${BASE}${path}`;
+  try {
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: `Request failed (${res.status})` }));
+      throw new Error(err.error || `Request failed (${res.status})`);
+    }
+    return res.json();
+  } catch (err) {
+    if (__DEV__) {
+      console.warn(`[api] Request error for ${url}:`, err.message || err);
+    }
+    throw err;
   }
-  return res.json();
 }
 
 function authHeaders(token) {
@@ -40,7 +49,14 @@ function authHeaders(token) {
 
 export const api = {
   getProducts: (params = {}) => {
-    const qs = new URLSearchParams(params).toString();
+    const cleanParams = {};
+    if (params.category && params.category !== "All") {
+      cleanParams.category = params.category;
+    }
+    if (params.search && typeof params.search === "string" && params.search.trim()) {
+      cleanParams.search = params.search.trim();
+    }
+    const qs = new URLSearchParams(cleanParams).toString();
     return request(`/products${qs ? `?${qs}` : ""}`);
   },
   getProduct: (id) => request(`/products/${id}`),

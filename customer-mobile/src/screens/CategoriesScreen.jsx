@@ -18,13 +18,19 @@ export default function CategoriesScreen() {
   const [counts, setCounts] = useState({});
 
   useEffect(() => {
-    api.getProducts().then((products) => {
-      const c = {};
-      products.forEach((p) => {
-        c[p.category] = (c[p.category] || 0) + 1;
+    api
+      .getProducts()
+      .then((products) => {
+        if (!Array.isArray(products)) return;
+        const c = {};
+        products.forEach((p) => {
+          c[p.category] = (c[p.category] || 0) + 1;
+        });
+        setCounts(c);
+      })
+      .catch((err) => {
+        console.warn("[CategoriesScreen] Failed to load category product counts:", err?.message || err);
       });
-      setCounts(c);
-    });
   }, []);
 
   return (
