@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import Header from "./components/Header.jsx";
+import AnnouncementBanner from "./components/AnnouncementBanner.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
@@ -26,6 +27,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <Header />
+      <AnnouncementBanner />
       <CustomerNotificationPrompt />
       <main className="page-fade">
         <Routes>
