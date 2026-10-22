@@ -7,6 +7,7 @@ import { ProductGridSkeleton } from "../components/Skeleton.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import Button from "../components/Button.jsx";
 import { colors, radius, shadow, spacing, typography } from "../theme.js";
+import { formatDeliveryLocationsLine } from "../utils/serviceAreas.js";
 
 const CATEGORIES = ["All", "Chicken", "Mutton", "Fish", "Seafood", "Country Chicken"];
 
@@ -17,6 +18,14 @@ export default function HomeScreen({ route }) {
   const [refreshing, setRefreshing] = useState(false);
   const [category, setCategory] = useState(route.params?.category || "All");
   const [search, setSearch] = useState("");
+  const [deliveryAreas, setDeliveryAreas] = useState([]);
+
+  useEffect(() => {
+    api
+      .getDeliveryAreas()
+      .then((data) => setDeliveryAreas(Array.isArray(data) ? data : []))
+      .catch(() => setDeliveryAreas([]));
+  }, []);
 
   // Categories screen navigates here with a `category` param (mirrors the
   // web app's navigate(`/?category=X`)) — apply it whenever it changes.
@@ -96,6 +105,13 @@ export default function HomeScreen({ route }) {
         <Ionicons name="car-outline" size={16} color={colors.primary} />
         <Text style={styles.scheduleText}>
           Orders confirmed every Saturday, delivered fresh Sunday morning.
+        </Text>
+      </View>
+
+      <View style={styles.deliveryLocationLine}>
+        <Ionicons name="location-outline" size={16} color={colors.primary} style={styles.deliveryPinIcon} />
+        <Text style={styles.deliveryLocationText}>
+          {formatDeliveryLocationsLine(deliveryAreas)}
         </Text>
       </View>
 
@@ -225,6 +241,30 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   scheduleText: { flex: 1, fontSize: 12, fontFamily: typography.body.semibold, color: "#8A5A00" },
+  deliveryLocationLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    gap: 8,
+    ...shadow.sm,
+  },
+  deliveryPinIcon: {
+    marginRight: 2,
+  },
+  deliveryLocationText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: typography.body.bold,
+    color: colors.text,
+    lineHeight: 17,
+  },
   chipRow: { marginTop: spacing.lg, marginBottom: spacing.md },
   chip: {
     borderWidth: 1,

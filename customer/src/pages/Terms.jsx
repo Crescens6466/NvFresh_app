@@ -24,27 +24,30 @@ export default function Terms() {
 
       <section>
         <h4>Delivery</h4>
-        <p>
-          NvFresh delivers once a week, every Sunday morning. Orders are confirmed on
-          Saturday for that week's delivery; orders placed after Saturday's cutoff roll
-          over to the following Sunday. Delivery windows may vary slightly based on
-          location.
-        </p>
+        <p>NvFresh currently delivers only to the following areas:</p>
+        <ul className="static-list">
+          <li>Tadepalli</li>
+          <li>Kunchanapalli</li>
+          <li>Undavalli</li>
+          <li>Nulakapeta</li>
+        </ul>
+        <p>Orders should be accepted for delivery only within these service areas.</p>
       </section>
 
       <section>
         <h4>Cancellations & Refunds</h4>
         <p>
-          Orders can be cancelled before dispatch for a full refund of the advance
-          amount. Once dispatched, fresh meat and seafood orders cannot be cancelled.
+          Orders can be cancelled until Saturday at 11:59 PM. Cancellations are
+          not allowed from Sunday 12:00 AM onwards through Sunday 11:59 PM.
+          Eligible cancellations made before the cutoff will receive a refund of
+          the advance payment, subject to the applicable refund process.
         </p>
       </section>
 
       <section>
         <h4>Product Quality</h4>
         <p>
-          If a product does not meet our freshness standards on delivery, contact us
-          within 2 hours for a replacement or refund.
+          NvFresh is committed to delivering fresh, hygienic, and quality meat products to our customers.
         </p>
       </section>
 

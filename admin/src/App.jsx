@@ -8,6 +8,7 @@ import Orders from "./pages/Orders.jsx";
 import Customers from "./pages/Customers.jsx";
 import Settings from "./pages/Settings.jsx";
 import Notifications from "./pages/Notifications.jsx";
+import DeliveryAreas from "./pages/DeliveryAreas.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 import "./App.css";
 
@@ -63,6 +64,14 @@ export default function App() {
         element={
           <ProtectedLayout>
             <Settings />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/delivery-areas"
+        element={
+          <ProtectedLayout>
+            <DeliveryAreas />
           </ProtectedLayout>
         }
       />

@@ -33,6 +33,17 @@
   color: var(--text-muted);
 }
 
+.static-page .static-list {
+  margin: 8px 0 10px 22px;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.static-page .static-list li {
+  margin-bottom: 4px;
+}
+
 .static-page .contact-list {
   display: flex;
   flex-direction: column;

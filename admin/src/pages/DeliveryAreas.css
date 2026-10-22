@@ -1,0 +1,114 @@
+.delivery-areas-page {
+  padding-bottom: 30px;
+}
+
+.delivery-areas-table-wrap {
+  overflow-x: auto;
+}
+
+.delivery-areas-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.delivery-areas-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.delivery-areas-table td {
+  padding: 14px 18px;
+  font-size: 0.86rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.delivery-areas-table tr:last-child td {
+  border-bottom: none;
+}
+
+.area-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.area-pin-icon {
+  color: var(--primary);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.area-date-cell {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.area-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.area-status-pill.is-active {
+  background: var(--success-bg, #E8F5E9);
+  color: var(--success, #2E7D32);
+  border-color: #C8E6C9;
+}
+
+.area-status-pill.is-active:hover {
+  background: #C8E6C9;
+}
+
+.area-status-pill.is-inactive {
+  background: #FEE2E2;
+  color: var(--danger, #DC2626);
+  border-color: #FECACA;
+}
+
+.area-status-pill.is-inactive:hover {
+  background: #FECACA;
+}
+
+.area-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.area-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  font-size: 0.76rem;
+}
+
+.btn-danger {
+  background: #FEF2F2;
+  color: var(--danger, #DC2626);
+  border: 1px solid #FECACA;
+}
+
+.btn-danger:hover {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+}
+

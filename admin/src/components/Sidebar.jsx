@@ -14,6 +14,7 @@ import {
   HiOutlineUsers,
   HiOutlineCog6Tooth,
   HiOutlineBell,
+  HiOutlineMapPin,
   HiOutlineArrowLeftOnRectangle,
 } from "react-icons/hi2";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -24,6 +25,7 @@ const LINKS = [
   { to: "/products", label: "Products", Icon: HiOutlineCube },
   { to: "/orders", label: "Orders", Icon: HiOutlineClipboardDocumentList },
   { to: "/customers", label: "Customers", Icon: HiOutlineUsers },
+  { to: "/delivery-areas", label: "Delivery Areas", Icon: HiOutlineMapPin },
   { to: "/settings", label: "Settings", Icon: HiOutlineCog6Tooth },
   { to: "/notifications", label: "Notifications", Icon: HiOutlineBell },
 ];

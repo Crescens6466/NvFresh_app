@@ -81,6 +81,12 @@ export const api = {
 
   getSettings: () => request(`/settings`),
   updateSettings: (data) => request(`/settings`, { method: "PUT", body: JSON.stringify(data) }),
+  getDeliveryAreas: () => request(`/delivery-areas/admin`),
+  createDeliveryArea: (data) =>
+    request(`/delivery-areas`, { method: "POST", body: JSON.stringify(data) }),
+  updateDeliveryArea: (id, data) =>
+    request(`/delivery-areas/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteDeliveryArea: (id) => request(`/delivery-areas/${id}`, { method: "DELETE" }),
 
   uploadImage: (file) => {
     const formData = new FormData();

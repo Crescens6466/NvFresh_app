@@ -28,6 +28,11 @@ import { sendAdminNewOrderNotification } from "../firebaseAdmin.js";
 import { emitAdminNotification } from "../realtime.js";
 import { sendAdminOrderTelegram } from "../utils/telegram.js";
 import { createAndSendCustomerOrderNotification } from "../utils/customerNotifications.js";
+import {
+  isDeliveryAreaServiceableAsync,
+  getServiceableAreaErrorMessageAsync,
+} from "../utils/serviceAreas.js";
+import { canCancelOrder, SUNDAY_CANCELLATION_ERROR_MESSAGE } from "../utils/cancellationPolicy.js";
 
 const router = express.Router();
 
@@ -36,7 +41,7 @@ const router = express.Router();
 // Order.whatsapp_notifications. Runs detached from the request/response
 // cycle — a slow or failed WhatsApp send must never delay or fail the HTTP
 // response for an order/status/payment change.
-function notifyAndRecord(orderId, notifierPromise) {
+export function notifyAndRecord(orderId, notifierPromise) {
   if (!notifierPromise) return;
   notifierPromise
     .then((record) => {
@@ -55,7 +60,7 @@ function notifyAndRecord(orderId, notifierPromise) {
     .catch((err) => console.error("[orders] Could not record WhatsApp notification:", err.message));
 }
 
-async function sendAdminOrderTelegramOnce(orderId, order) {
+export async function sendAdminOrderTelegramOnce(orderId, order) {
   try {
       const claimedOrder = await Order.findOneAndUpdate(
         {
@@ -106,7 +111,7 @@ async function sendAdminOrderTelegramOnce(orderId, order) {
   }
 }
 
-function scheduleCustomerOrderNotification(customerUid, orderId, type) {
+export function scheduleCustomerOrderNotification(customerUid, orderId, type) {
   const task = createAndSendCustomerOrderNotification({ customerUid, orderId, type });
   try {
     waitUntil(task);
@@ -184,6 +189,9 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
 
     if (!customerName || !phone || !address || !transactionId) {
       return res.status(400).json({ error: "Missing required order fields" });
+    }
+    if (!(await isDeliveryAreaServiceableAsync(address))) {
+      return res.status(400).json({ error: await getServiceableAreaErrorMessageAsync() });
     }
     if (!isValidAdvancePercentage(advancePercentage)) {
       return res.status(400).json({ error: "advancePercentage must be one of 25, 50, 75, 100" });
@@ -285,11 +293,59 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
 router.get("/mine", requireCustomerAuth, async (req, res, next) => {
   try {
     const orders = await Order.find({ customer_uid: req.customer.uid }).sort({ created_at: -1 });
-    res.json(toClientList(orders));
+    const clientOrders = toClientList(orders).map((o) => {
+      const eligibility = canCancelOrder(o);
+      return {
+        ...o,
+        can_cancel: eligibility.allowed,
+        cancellation_blocked_reason: eligibility.reason,
+      };
+    });
+    res.json(clientOrders);
   } catch (err) {
     next(err);
   }
 });
+
+// POST /api/orders/:id/cancel and PUT /api/orders/:id/cancel — customer cancels their own order
+const customerCancelHandler = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    if (order.customer_uid !== req.customer.uid) {
+      return res.status(403).json({ error: "Unauthorized to cancel this order" });
+    }
+
+    const eligibility = canCancelOrder(order);
+    if (!eligibility.allowed) {
+      return res.status(400).json({ error: eligibility.reason });
+    }
+
+    const reason = req.body?.reason?.trim() || "Cancelled by customer";
+    order.status = "Cancelled";
+    order.cancellation_reason = reason;
+    await order.save();
+
+    const clientOrder = toClient(order);
+    scheduleCustomerOrderNotification(order.customer_uid, order._id, "order_cancelled");
+    res.json({
+      ...clientOrder,
+      can_cancel: false,
+      cancellation_blocked_reason: "Order is already cancelled.",
+    });
+
+    notifyAndRecord(order._id, sendOrderCancelledNotification(clientOrder));
+  } catch (err) {
+    if (err.name === "CastError") return res.status(404).json({ error: "Order not found" });
+    next(err);
+  }
+};
+
+router.post("/:id/cancel", requireCustomerAuth, customerCancelHandler);
+router.put("/:id/cancel", requireCustomerAuth, customerCancelHandler);
 
 // GET /api/orders — list all orders (admin only)
 router.get("/", requireAuth, async (req, res, next) => {

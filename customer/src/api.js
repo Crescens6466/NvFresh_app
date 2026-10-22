@@ -44,6 +44,7 @@ export const api = {
   },
   getProduct: (id) => request(`/products/${id}`),
   getSettings: () => request(`/settings`),
+  getDeliveryAreas: () => request(`/delivery-areas`),
   placeOrder: (order, token) =>
     request(`/orders`, {
       method: "POST",
@@ -59,7 +60,25 @@ export const api = {
       body: JSON.stringify({ items, advancePercentage }),
       headers: authHeaders(token),
     }),
+  createRazorpayOrder: (payload, token) =>
+    request(`/create-order`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: authHeaders(token),
+    }),
+  verifyRazorpayPayment: (payload, token) =>
+    request(`/verify-payment`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: authHeaders(token),
+    }),
   getMyOrders: (token) => request(`/orders/mine`, { headers: authHeaders(token) }),
+  cancelOrder: (id, reason, token) =>
+    request(`/orders/${id}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+      headers: authHeaders(token),
+    }),
   getCustomerNotifications: (token) =>
     request(`/customer-notifications`, { headers: authHeaders(token) }),
   getCustomerNotificationUnreadCount: (token) =>

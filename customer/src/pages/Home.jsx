@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { HiOutlineTruck, HiOutlineShieldCheck, HiOutlineSparkles } from "react-icons/hi2";
+import { HiOutlineTruck, HiOutlineShieldCheck, HiOutlineSparkles, HiOutlineMapPin } from "react-icons/hi2";
 import { HiOutlineSearch } from "react-icons/hi";
 import { HiOutlineInboxStack } from "react-icons/hi2";
 import { api } from "../api.js";
+import { formatDeliveryLocationsLine } from "../utils/serviceAreas.js";
 import ProductCard from "../components/ProductCard.jsx";
 import { ProductGridSkeleton } from "../components/Skeleton.jsx";
 import "./Home.css";
@@ -16,6 +17,14 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState(searchParams.get("category") || "All");
   const [search, setSearch] = useState("");
+  const [deliveryAreas, setDeliveryAreas] = useState([]);
+
+  useEffect(() => {
+    api
+      .getDeliveryAreas()
+      .then((data) => setDeliveryAreas(Array.isArray(data) ? data : []))
+      .catch(() => setDeliveryAreas([]));
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -67,6 +76,11 @@ export default function Home() {
       <div className="schedule-banner" style={{ margin: "16px 16px 0" }}>
         <HiOutlineTruck />
         <span>Orders confirmed every Saturday, delivered fresh Sunday morning.</span>
+      </div>
+
+      <div className="home-delivery-line">
+        <HiOutlineMapPin className="home-delivery-pin" />
+        <span>{formatDeliveryLocationsLine(deliveryAreas)}</span>
       </div>
 
       {/* Category chips */}

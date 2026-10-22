@@ -155,8 +155,8 @@ export default function ProductDetails() {
         <div className="pd-info-card">
           <h4>Delivery Information</h4>
           <p>
-            We deliver once a week. Orders are confirmed every Saturday and delivered fresh
-            on Sunday morning, in insulated, leak-proof hygienic packaging.
+            We deliver once a week, every Sunday morning. Deliveries are available only in
+            Tadepalli, Kunchanapalli, Undavalli, and Nulakapeta, in insulated, leak-proof hygienic packaging.
           </p>
         </div>
       </div>

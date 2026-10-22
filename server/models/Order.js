@@ -38,6 +38,10 @@ const orderSchema = new mongoose.Schema(
     // Server-generated reference embedded in the payment QR. This is
     // intentionally separate from the customer's submitted UPI/UTR reference.
     payment_reference: { type: String, default: null, index: true },
+    payment_method: { type: String, enum: ["upi_qr", "razorpay"], default: "upi_qr" },
+    razorpay_order_id: { type: String, default: null, index: true },
+    razorpay_payment_id: { type: String, default: null, index: true },
+    razorpay_signature: { type: String, default: null },
     admin_sms_notification: {
       status: {
         type: String,

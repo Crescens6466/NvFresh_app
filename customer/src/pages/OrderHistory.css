@@ -113,3 +113,45 @@
 .order-history-remaining.is-full {
   color: #2E7D32;
 }
+
+.order-history-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-light, #eee);
+}
+
+.order-history-cancel-btn {
+  align-self: flex-start;
+  padding: 6px 12px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #B91C1C;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.order-history-cancel-btn:hover:not(:disabled) {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+}
+
+.order-history-cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.order-history-cutoff-note {
+  font-size: 0.74rem;
+  color: #92400E;
+  background: #FEF3C7;
+  border: 1px solid #FDE68A;
+  border-radius: var(--radius-sm, 6px);
+  padding: 6px 10px;
+  line-height: 1.35;
+}

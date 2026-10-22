@@ -250,6 +250,16 @@
   letter-spacing: 0.02em;
 }
 
+.payment-address-service-note {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: none;
+  letter-spacing: normal;
+  margin-top: -2px;
+  margin-bottom: 2px;
+}
+
 .payment-form input,
 .payment-form textarea {
   padding: 12px;
@@ -266,3 +276,113 @@
 .payment-form button {
   margin-top: 6px;
 }
+
+/* Payment method selection */
+.payment-method-section {
+  margin-bottom: 16px;
+}
+
+.payment-method-heading {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.payment-method-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.payment-method-tab {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 10px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.payment-method-tab.is-active {
+  border-color: var(--primary);
+  background: #FFF8F5;
+  box-shadow: var(--shadow-sm);
+}
+
+.payment-method-tab-title {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.payment-method-tab.is-active .payment-method-tab-title {
+  color: var(--primary);
+}
+
+.payment-method-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.payment-method-tab-sub {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+/* Razorpay info card */
+.payment-razorpay-info-card {
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 20px 16px;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+}
+
+.payment-razorpay-secure-note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #2E7D32;
+  background: #E8F5E9;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 12px;
+}
+
+.payment-secure-icon {
+  font-size: 1rem;
+}
+
+.payment-razorpay-badges {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.payment-razorpay-badge {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+

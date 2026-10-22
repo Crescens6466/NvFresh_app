@@ -16,6 +16,11 @@ import { useCart } from "../context/CartContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
 import { api, resolveImageUrl } from "../api.js";
+import {
+  isDeliveryAreaServiceable,
+  formatServiceableAreaMessage,
+  SERVICEABLE_AREA_ERROR_MESSAGE,
+} from "../utils/serviceAreas.js";
 import ScreenHeader from "../components/ScreenHeader.jsx";
 import Button from "../components/Button.jsx";
 import { colors, radius, shadow, spacing, typography } from "../theme.js";
@@ -47,6 +52,14 @@ export default function PaymentScreen() {
     transactionId: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [deliveryAreas, setDeliveryAreas] = useState([]);
+
+  useEffect(() => {
+    api
+      .getDeliveryAreas()
+      .then((data) => setDeliveryAreas(Array.isArray(data) ? data : []))
+      .catch(() => setDeliveryAreas([]));
+  }, []);
 
   useEffect(() => {
     if (items.length === 0) {
@@ -114,6 +127,11 @@ export default function PaymentScreen() {
   async function handleSubmit() {
     if (!form.name || !form.phone || !form.address || !form.transactionId) {
       showToast("Please fill in all fields", "error");
+      return;
+    }
+    const activeNames = deliveryAreas.length > 0 ? deliveryAreas.map((a) => a.name) : undefined;
+    if (!isDeliveryAreaServiceable(form.address, activeNames)) {
+      showToast(formatServiceableAreaMessage(activeNames), "error");
       return;
     }
     if (!quote) {
@@ -290,11 +308,14 @@ export default function PaymentScreen() {
           />
 
           <Text style={styles.label}>Delivery Address</Text>
+          <Text style={styles.serviceAreaNote}>
+            Delivering only to Tadepalli, Kunchanapalli, Undavalli, and Nulakapeta
+          </Text>
           <TextInput
             style={[styles.input, styles.textarea]}
             value={form.address}
             onChangeText={(v) => setField("address", v)}
-            placeholder="House no, street, area, city, pincode"
+            placeholder="House no, street, area (Tadepalli, Kunchanapalli, Undavalli, Nulakapeta)"
             placeholderTextColor={colors.textMuted}
             multiline
             numberOfLines={3}
@@ -611,6 +632,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     marginBottom: 6,
     marginTop: spacing.sm,
+  },
+  serviceAreaNote: {
+    fontSize: 11,
+    fontFamily: typography.body.medium,
+    color: colors.primary,
+    marginBottom: spacing.xs,
   },
   input: {
     borderWidth: 1,
