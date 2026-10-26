@@ -13,22 +13,45 @@ import { api } from "../api.js";
 import "./StaticPage.css";
 
 const DEFAULT_PHONE = "+91 98765 43210";
+const DEFAULT_EMAIL = "support@nvfresh.in";
+const DEFAULT_ADDRESS = "NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India";
+const DEFAULT_SUPPORT_HOURS = "Everyday, 7:00 AM – 9:00 PM";
+const DEFAULT_DELIVERY_SCHEDULE = "Orders confirmed Saturday, delivered fresh every Sunday morning";
 const WHATSAPP_MESSAGE = "Hi NvFresh, I have a question about my order.";
 
 export default function Contact() {
   const navigate = useNavigate();
-  const [phone, setPhone] = useState(DEFAULT_PHONE);
+  const [settings, setSettings] = useState({
+    phone: DEFAULT_PHONE,
+    email: DEFAULT_EMAIL,
+    address: DEFAULT_ADDRESS,
+    supportHours: DEFAULT_SUPPORT_HOURS,
+    deliverySchedule: DEFAULT_DELIVERY_SCHEDULE,
+  });
 
   useEffect(() => {
+    let active = true;
     api
       .getSettings()
       .then((s) => {
-        if (s?.phone_number) setPhone(s.phone_number);
+        if (active && s) {
+          setSettings({
+            phone: s.phone_number || s.phoneNumber || DEFAULT_PHONE,
+            email: s.support_email || s.supportEmail || DEFAULT_EMAIL,
+            address: s.business_address || s.businessAddress || DEFAULT_ADDRESS,
+            supportHours: s.support_hours || s.supportHours || DEFAULT_SUPPORT_HOURS,
+            deliverySchedule: s.delivery_schedule || s.deliverySchedule || DEFAULT_DELIVERY_SCHEDULE,
+          });
+        }
       })
       .catch(() => {});
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const whatsappNumber = phone.replace(/\D/g, "");
+  const whatsappNumber = settings.phone.replace(/\D/g, "");
   const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 
   return (
@@ -56,35 +79,35 @@ export default function Contact() {
           <HiOutlinePhone />
           <div>
             <h5>Call Us</h5>
-            <p>{phone}</p>
+            <p>{settings.phone}</p>
           </div>
         </div>
         <div className="contact-item">
           <HiOutlineEnvelope />
           <div>
             <h5>Email</h5>
-            <p>support@nvfresh.in</p>
+            <p>{settings.email}</p>
           </div>
         </div>
         <div className="contact-item">
           <HiOutlineMapPin />
           <div>
             <h5>Address</h5>
-            <p>NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India</p>
+            <p>{settings.address}</p>
           </div>
         </div>
         <div className="contact-item">
           <HiOutlineClock />
           <div>
             <h5>Support Hours</h5>
-            <p>Everyday, 7:00 AM – 9:00 PM</p>
+            <p>{settings.supportHours}</p>
           </div>
         </div>
         <div className="contact-item">
           <HiOutlineTruck />
           <div>
             <h5>Delivery Day</h5>
-            <p>Orders confirmed Saturday, delivered fresh every Sunday morning</p>
+            <p>{settings.deliverySchedule}</p>
           </div>
         </div>
       </div>

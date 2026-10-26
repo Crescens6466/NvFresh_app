@@ -7,30 +7,74 @@ import ScreenHeader from "../components/ScreenHeader.jsx";
 import Button from "../components/Button.jsx";
 import { colors, radius, shadow, spacing } from "../theme.js";
 
-const DEFAULT_PHONE = "+91 98765 43210";
+const DEFAULT_SETTINGS = {
+  phone: "+91 98765 43210",
+  email: "support@nvfresh.in",
+  address: "NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India",
+  supportHours: "Everyday, 7:00 AM – 9:00 PM",
+  deliverySchedule: "Orders confirmed Saturday, delivered fresh every Sunday morning",
+};
 const WHATSAPP_MESSAGE = "Hi NvFresh, I have a question about my order.";
 
 const ITEMS = [
-  { icon: "call-outline", label: "Call Us", value: (phone) => phone },
-  { icon: "mail-outline", label: "Email", value: () => "support@nvfresh.in" },
-  { icon: "location-outline", label: "Address", value: () => "NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India" },
-  { icon: "time-outline", label: "Support Hours", value: () => "Everyday, 7:00 AM – 9:00 PM" },
-  { icon: "car-outline", label: "Delivery Day", value: () => "Orders confirmed Saturday, delivered fresh every Sunday morning" },
+  {
+    icon: "call-outline",
+    label: "Call Us",
+    value: (s) => s.phone,
+    getAction: (s) => (s.phone ? () => Linking.openURL(`tel:${s.phone}`) : undefined),
+  },
+  {
+    icon: "mail-outline",
+    label: "Email",
+    value: (s) => s.email,
+    getAction: (s) => (s.email ? () => Linking.openURL(`mailto:${s.email}`) : undefined),
+  },
+  {
+    icon: "location-outline",
+    label: "Address",
+    value: (s) => s.address,
+    getAction: () => undefined,
+  },
+  {
+    icon: "time-outline",
+    label: "Support Hours",
+    value: (s) => s.supportHours,
+    getAction: () => undefined,
+  },
+  {
+    icon: "car-outline",
+    label: "Delivery Day",
+    value: (s) => s.deliverySchedule,
+    getAction: () => undefined,
+  },
 ];
 
 export default function ContactScreen() {
-  const [phone, setPhone] = useState(DEFAULT_PHONE);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
 
   useEffect(() => {
+    let active = true;
     api
       .getSettings()
       .then((s) => {
-        if (s?.phone_number) setPhone(s.phone_number);
+        if (active && s) {
+          setSettings({
+            phone: s.phone_number || s.phoneNumber || DEFAULT_SETTINGS.phone,
+            email: s.support_email || s.supportEmail || DEFAULT_SETTINGS.email,
+            address: s.business_address || s.businessAddress || DEFAULT_SETTINGS.address,
+            supportHours: s.support_hours || s.supportHours || DEFAULT_SETTINGS.supportHours,
+            deliverySchedule: s.delivery_schedule || s.deliverySchedule || DEFAULT_SETTINGS.deliverySchedule,
+          });
+        }
       })
       .catch(() => {});
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const whatsappNumber = phone.replace(/\D/g, "");
+  const whatsappNumber = settings.phone.replace(/\D/g, "");
   const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 
   return (
@@ -47,20 +91,23 @@ export default function ContactScreen() {
         />
 
         <View style={styles.list}>
-          {ITEMS.map(({ icon, label, value }) => (
-            <TouchableOpacity
-              key={label}
-              style={styles.item}
-              activeOpacity={label === "Call Us" ? 0.7 : 1}
-              onPress={label === "Call Us" ? () => Linking.openURL(`tel:${phone}`) : undefined}
-            >
-              <Ionicons name={icon} size={20} color={colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemLabel}>{label}</Text>
-                <Text style={styles.itemValue}>{value(phone)}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+          {ITEMS.map(({ icon, label, value, getAction }) => {
+            const action = getAction(settings);
+            return (
+              <TouchableOpacity
+                key={label}
+                style={styles.item}
+                activeOpacity={action ? 0.7 : 1}
+                onPress={action}
+              >
+                <Ionicons name={icon} size={20} color={colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemLabel}>{label}</Text>
+                  <Text style={styles.itemValue}>{value(settings)}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </ScrollView>
     </View>

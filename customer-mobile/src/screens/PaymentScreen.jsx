@@ -27,6 +27,10 @@ import { colors, radius, shadow, spacing, typography } from "../theme.js";
 
 const ADVANCE_OPTIONS = [25, 50, 75, 100];
 
+// Toggle to temporarily disable visible payment options while waiting for
+// Razorpay / Cashfree merchant account approval. Set to false to restore.
+const ONLINE_PAYMENTS_DISABLED = true;
+
 export default function PaymentScreen() {
   const { items, clearCart } = useCart();
   const navigation = useNavigation();
@@ -125,6 +129,10 @@ export default function PaymentScreen() {
   }
 
   async function handleSubmit() {
+    if (ONLINE_PAYMENTS_DISABLED) {
+      showToast("We're working on secure online payments. Please check back soon.", "info");
+      return;
+    }
     if (!form.name || !form.phone || !form.address || !form.transactionId) {
       showToast("Please fill in all fields", "error");
       return;
@@ -240,7 +248,19 @@ export default function PaymentScreen() {
           )}
         </View>
 
-        <View style={styles.qrCard}>
+        {/* Payment Section: Temporarily replaced with "Online Payments Coming Soon" while preserving original payment UI */}
+        {ONLINE_PAYMENTS_DISABLED ? (
+          <View style={styles.comingSoonCard}>
+            <View style={styles.comingSoonIconWrap}>
+              <Ionicons name="card-outline" size={32} color={colors.primary} />
+            </View>
+            <Text style={styles.comingSoonTitle}>Online Payments Coming Soon</Text>
+            <Text style={styles.comingSoonMessage}>
+              We're working on secure online payments. Please check back soon.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.qrCard}>
           <View style={styles.qrAmountSection}>
             <Text style={styles.qrAmountLabel}>Payment Amount</Text>
             <Text style={styles.qrAmountValue}>
@@ -285,6 +305,8 @@ export default function PaymentScreen() {
           ) : null}
         </View>
 
+        )}
+
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>Delivery Details</Text>
 
@@ -321,21 +343,41 @@ export default function PaymentScreen() {
             numberOfLines={3}
           />
 
-          <Text style={styles.label}>Transaction ID</Text>
-          <TextInput
-            style={styles.input}
-            value={form.transactionId}
-            onChangeText={(v) => setField("transactionId", v)}
-            placeholder="UPI reference / transaction ID"
-            placeholderTextColor={colors.textMuted}
-          />
+          {!ONLINE_PAYMENTS_DISABLED && (
+            <>
+              <Text style={styles.label}>Transaction ID</Text>
+              <TextInput
+                style={styles.input}
+                value={form.transactionId}
+                onChangeText={(v) => setField("transactionId", v)}
+                placeholder="UPI reference / transaction ID"
+                placeholderTextColor={colors.textMuted}
+              />
+            </>
+          )}
 
-          <Button
-            title={submitting ? "Placing Order..." : "Place Order"}
-            onPress={handleSubmit}
-            disabled={submitting || quoteLoading}
-            style={{ marginTop: spacing.md }}
-          />
+          {ONLINE_PAYMENTS_DISABLED ? (
+            <>
+              <Button
+                title="Online Payments Coming Soon"
+                disabled={true}
+                style={{ marginTop: spacing.md }}
+              />
+              <Button
+                title="Return to Cart"
+                variant="outline"
+                onPress={() => navigation.navigate("Main", { screen: "Cart" })}
+                style={{ marginTop: spacing.sm }}
+              />
+            </>
+          ) : (
+            <Button
+              title={submitting ? "Placing Order..." : "Place Order"}
+              onPress={handleSubmit}
+              disabled={submitting || quoteLoading}
+              style={{ marginTop: spacing.md }}
+            />
+          )}
         </View>
       </ScrollView>
     </View>
@@ -653,5 +695,38 @@ const styles = StyleSheet.create({
     height: 80,
     paddingTop: 12,
     textAlignVertical: "top",
+  },
+  comingSoonCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: 24,
+    marginBottom: spacing.xl,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow.sm,
+  },
+  comingSoonIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#FEE2E2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  comingSoonTitle: {
+    fontSize: 18,
+    fontFamily: typography.display.bold,
+    color: colors.text,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  comingSoonMessage: {
+    fontSize: 13,
+    fontFamily: typography.body.medium,
+    color: colors.textMuted,
+    textAlign: "center",
+    lineHeight: 19,
+    maxWidth: 280,
   },
 });

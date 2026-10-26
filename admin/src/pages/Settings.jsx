@@ -4,6 +4,11 @@ import { api, resolveImageUrl } from "../api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import "./Settings.css";
 
+const DEFAULT_SUPPORT_EMAIL = "support@nvfresh.in";
+const DEFAULT_BUSINESS_ADDRESS = "NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India";
+const DEFAULT_SUPPORT_HOURS = "Everyday, 7:00 AM – 9:00 PM";
+const DEFAULT_DELIVERY_SCHEDULE = "Orders confirmed Saturday, delivered fresh every Sunday morning";
+
 export default function Settings() {
   const { showToast } = useToast();
   const [form, setForm] = useState({
@@ -12,6 +17,10 @@ export default function Settings() {
     upiId: "",
     qrImage: "",
     deliveryCharge: 0,
+    supportEmail: "",
+    businessAddress: "",
+    supportHours: "",
+    deliverySchedule: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -22,11 +31,15 @@ export default function Settings() {
       .getSettings()
       .then((s) =>
         setForm({
-          businessName: s.business_name,
-          phoneNumber: s.phone_number,
-          upiId: s.upi_id,
-          qrImage: s.qr_image || "",
-          deliveryCharge: s.delivery_charge ?? 0,
+          businessName: s.business_name || s.businessName || "",
+          phoneNumber: s.phone_number || s.phoneNumber || "",
+          upiId: s.upi_id || s.upiId || "",
+          qrImage: s.qr_image || s.qrImage || "",
+          deliveryCharge: s.delivery_charge ?? s.deliveryCharge ?? 0,
+          supportEmail: s.support_email || s.supportEmail || DEFAULT_SUPPORT_EMAIL,
+          businessAddress: s.business_address || s.businessAddress || DEFAULT_BUSINESS_ADDRESS,
+          supportHours: s.support_hours || s.supportHours || DEFAULT_SUPPORT_HOURS,
+          deliverySchedule: s.delivery_schedule || s.deliverySchedule || DEFAULT_DELIVERY_SCHEDULE,
         })
       )
       .finally(() => setLoading(false));
@@ -48,6 +61,15 @@ export default function Settings() {
 
   async function handleSave(e) {
     e.preventDefault();
+
+    if (form.supportEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(form.supportEmail.trim())) {
+        showToast("Please enter a valid support email address", "error");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       await api.updateSettings(form);
@@ -66,7 +88,7 @@ export default function Settings() {
   return (
     <div className="settings page-fade">
       <h2 className="page-title">Settings</h2>
-      <p className="page-subtitle">Manage your business details and payment info.</p>
+      <p className="page-subtitle">Manage your business details, contact information, and payment info.</p>
 
       <form className="card settings-card" onSubmit={handleSave}>
         <div className="field">
@@ -74,6 +96,7 @@ export default function Settings() {
           <input
             value={form.businessName}
             onChange={(e) => setForm({ ...form, businessName: e.target.value })}
+            placeholder="NvFresh"
           />
         </div>
 
@@ -82,12 +105,55 @@ export default function Settings() {
           <input
             value={form.phoneNumber}
             onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
+            placeholder="+91 98765 43210"
+          />
+        </div>
+
+        <div className="field">
+          <label>Support Email</label>
+          <input
+            type="email"
+            value={form.supportEmail}
+            onChange={(e) => setForm({ ...form, supportEmail: e.target.value })}
+            placeholder="support@nvfresh.in"
+          />
+        </div>
+
+        <div className="field">
+          <label>Business Address</label>
+          <textarea
+            rows={3}
+            value={form.businessAddress}
+            onChange={(e) => setForm({ ...form, businessAddress: e.target.value })}
+            placeholder="NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India"
+          />
+        </div>
+
+        <div className="field">
+          <label>Support Hours</label>
+          <input
+            value={form.supportHours}
+            onChange={(e) => setForm({ ...form, supportHours: e.target.value })}
+            placeholder="Everyday, 7:00 AM – 9:00 PM"
+          />
+        </div>
+
+        <div className="field">
+          <label>Delivery Day / Schedule</label>
+          <input
+            value={form.deliverySchedule}
+            onChange={(e) => setForm({ ...form, deliverySchedule: e.target.value })}
+            placeholder="Orders confirmed Saturday, delivered fresh every Sunday morning"
           />
         </div>
 
         <div className="field">
           <label>UPI ID</label>
-          <input value={form.upiId} onChange={(e) => setForm({ ...form, upiId: e.target.value })} />
+          <input
+            value={form.upiId}
+            onChange={(e) => setForm({ ...form, upiId: e.target.value })}
+            placeholder="nvfresh@upi"
+          />
         </div>
 
         <div className="field">

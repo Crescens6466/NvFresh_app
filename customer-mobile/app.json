@@ -29,10 +29,8 @@
         "android.permission.USE_FINGERPRINT"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#FFF8F3",
+        "foregroundImage": "./assets/icon.png"
       }
     },
     "web": {
@@ -46,7 +44,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "97e85c69-5459-4b7b-9fa4-eb6468695a7d"
+        "projectId": "87b76ebb-5112-486a-8e08-383183ea5976"
       }
     }
   }
