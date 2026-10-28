@@ -14,7 +14,6 @@ import { api, resolveImageUrl } from "../api.js";
 import {
   isDeliveryAreaServiceable,
   formatServiceableAreaMessage,
-  SERVICEABLE_AREA_ERROR_MESSAGE,
 } from "../utils/serviceAreas.js";
 import "./Payment.css";
 
@@ -303,6 +302,10 @@ export default function Payment() {
   }
 
   const isFullyPaid = advancePercentage === 100;
+  const activeAreaNames = deliveryAreas.length > 0 ? deliveryAreas.map((a) => a.name) : undefined;
+  const isAddressServiceable = form.address.trim().length >= 3
+    ? isDeliveryAreaServiceable(form.address, activeAreaNames)
+    : null;
 
   return (
     <div className="payment page-fade">
@@ -335,6 +338,36 @@ export default function Payment() {
           </button>
         </div>
       )}
+
+      {/* Order Items Preview */}
+      <div className="payment-order-items-card">
+        <div className="payment-order-items-header">
+          <h4>Items in Order ({items.length})</h4>
+          <button
+            type="button"
+            className="payment-edit-cart-btn"
+            onClick={() => navigate("/cart")}
+          >
+            Edit Cart
+          </button>
+        </div>
+        <div className="payment-order-items-list">
+          {items.map((item) => (
+            <div key={item.key} className="payment-order-item-row">
+              <img
+                src={resolveImageUrl(item.image)}
+                alt={item.name}
+                className="payment-order-item-thumb"
+              />
+              <div className="payment-order-item-info">
+                <div className="payment-order-item-name">{item.name}</div>
+                <div className="payment-order-item-meta">{item.weight} × {item.quantity}</div>
+              </div>
+              <div className="payment-order-item-price">₹{item.price * item.quantity}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="payment-amount-card">
         <div className="payment-amount-row">
@@ -504,6 +537,18 @@ export default function Payment() {
             required
           />
         </label>
+
+        {isAddressServiceable === true && (
+          <div className="payment-address-badge is-serviceable">
+            <HiOutlineShieldCheck />
+            <span>Serviceable delivery area detected</span>
+          </div>
+        )}
+        {isAddressServiceable === false && (
+          <div className="payment-address-badge is-warning">
+            <span>Please include Tadepalli, Kunchanapalli, Undavalli, or Nulakapeta</span>
+          </div>
+        )}
 
         {paymentMethod === "qr" && (
           <label>

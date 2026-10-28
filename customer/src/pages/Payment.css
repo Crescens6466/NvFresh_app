@@ -386,3 +386,108 @@
   color: var(--text-muted);
 }
 
+/* Order Items Review card */
+.payment-order-items-card {
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+}
+
+.payment-order-items-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.payment-order-items-header h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.payment-edit-cart-btn {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.payment-edit-cart-btn:hover {
+  text-decoration: underline;
+}
+
+.payment-order-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.payment-order-item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.payment-order-item-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--bg);
+}
+
+.payment-order-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.payment-order-item-name {
+  font-size: 0.84rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.payment-order-item-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.payment-order-item-price {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Serviceable area feedback badges */
+.payment-address-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.76rem;
+  font-weight: 600;
+  margin-top: -6px;
+  margin-bottom: 10px;
+}
+
+.payment-address-badge.is-serviceable {
+  background: #E8F5E9;
+  color: #2E7D32;
+  border: 1px solid #C8E6C9;
+}
+
+.payment-address-badge.is-warning {
+  background: #FDE7E7;
+  color: #C62828;
+  border: 1px solid #F5C6CB;
+}

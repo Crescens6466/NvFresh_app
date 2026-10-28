@@ -39,6 +39,14 @@ export default function CartScreen() {
     unavailableProductIds.has(String(item.productId))
   );
 
+  function handleRemoveUnavailable() {
+    items.forEach((item) => {
+      if (unavailableProductIds.has(String(item.productId))) {
+        removeFromCart(item.key);
+      }
+    });
+  }
+
   function handleCheckout() {
     if (hasUnavailableItems) return;
     if (isLoggedIn) navigation.navigate("Payment");
@@ -123,8 +131,19 @@ export default function CartScreen() {
 
             {hasUnavailableItems && (
               <View style={styles.warningCard}>
-                <Text style={styles.warningTitle}>Some items in your cart are currently unavailable.</Text>
-                <Text style={styles.warningText}>Please remove them to proceed with checkout.</Text>
+                <Ionicons name="alert-circle" size={18} color={colors.primary} style={{ marginTop: 2 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.warningTitle}>Some items in your cart are currently unavailable.</Text>
+                  <Text style={styles.warningText}>Please remove them to proceed with checkout.</Text>
+                  <TouchableOpacity
+                    style={styles.removeUnavailableBtn}
+                    onPress={handleRemoveUnavailable}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="trash-outline" size={13} color={colors.primary} />
+                    <Text style={styles.removeUnavailableText}>Remove All Unavailable Items</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </View>
@@ -183,6 +202,8 @@ const styles = StyleSheet.create({
     fontFamily: typography.body.bold,
   },
   warningCard: {
+    flexDirection: "row",
+    gap: spacing.sm,
     backgroundColor: "#FDE7E7",
     borderWidth: 1,
     borderColor: "#F5C6CB",
@@ -199,6 +220,25 @@ const styles = StyleSheet.create({
   warningText: {
     fontSize: 12,
     color: colors.text,
+    marginBottom: 8,
+    lineHeight: 16,
+  },
+  removeUnavailableBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#F5C6CB",
+    borderRadius: radius.pill,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  removeUnavailableText: {
+    fontSize: 11,
+    fontFamily: typography.body.bold,
+    color: colors.primary,
   },
   itemImage: { width: 56, height: 56, borderRadius: radius.sm, backgroundColor: colors.border },
   itemInfo: { flex: 1 },

@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   HiOutlineUserCircle,
   HiOutlineClipboardDocumentList,
-  HiOutlineMapPin,
   HiOutlineInformationCircle,
   HiOutlinePhone,
   HiOutlineShieldCheck,
@@ -68,27 +67,33 @@ export default function Profile() {
         )}
       </div>
 
-      <div className="profile-quick">
-        {isLoggedIn ? (
-          <Link to="/orders" className="profile-quick-item">
+      {isLoggedIn ? (
+        <Link to="/orders" className="profile-orders-card">
+          <div className="profile-orders-icon">
             <HiOutlineClipboardDocumentList />
-            <span>My Orders</span>
-          </Link>
-        ) : (
-          <div
-            className="profile-quick-item"
-            onClick={() => navigate("/login")}
-            role="button"
-          >
-            <HiOutlineClipboardDocumentList />
-            <span>My Orders</span>
           </div>
-        )}
-        <div className="profile-quick-item">
-          <HiOutlineMapPin />
-          <span>Addresses</span>
+          <div className="profile-orders-info">
+            <h4>My Orders</h4>
+            <p>View your past orders & order status</p>
+          </div>
+          <HiChevronRight className="profile-link-chevron" />
+        </Link>
+      ) : (
+        <div
+          className="profile-orders-card"
+          onClick={() => navigate("/login")}
+          role="button"
+        >
+          <div className="profile-orders-icon">
+            <HiOutlineClipboardDocumentList />
+          </div>
+          <div className="profile-orders-info">
+            <h4>My Orders</h4>
+            <p>Sign in to view order history</p>
+          </div>
+          <HiChevronRight className="profile-link-chevron" />
         </div>
-      </div>
+      )}
 
       <div className="profile-links">
         {LINKS.map(({ to, label, Icon }) => (

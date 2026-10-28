@@ -12,6 +12,7 @@
     },
     "android": {
       "package": "com.nvfresh.customer",
+      "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.INTERNET",

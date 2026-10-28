@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HiOutlineHeart, HiHeart } from "react-icons/hi2";
+import { HiOutlineHeart, HiHeart, HiMinus, HiPlus } from "react-icons/hi2";
 import { useCart } from "../context/CartContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { priceForWeight } from "../utils.js";
@@ -17,11 +17,14 @@ export default function ProductCard({ product }) {
   const [weight, setWeight] = useState(product.weights[1] || product.weights[0]);
   const [liked, setLiked] = useState(false);
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { items, addToCart, updateQuantity } = useCart();
   const { showToast } = useToast();
 
   const isAvailable = product.isAvailable !== false;
   const displayPrice = priceForWeight(product.price, weight);
+
+  const cartItem = items.find((i) => i.productId === product.id && i.weight === weight);
+  const inCartQty = cartItem ? cartItem.quantity : 0;
 
   function handleAdd(e) {
     e.stopPropagation();
@@ -33,7 +36,9 @@ export default function ProductCard({ product }) {
   function handleBuyNow(e) {
     e.stopPropagation();
     if (!isAvailable) return;
-    addToCart(product, weight, 1, displayPrice);
+    if (inCartQty === 0) {
+      addToCart(product, weight, 1, displayPrice);
+    }
     navigate("/cart");
   }
 
@@ -85,9 +90,40 @@ export default function ProductCard({ product }) {
         <div className="product-card-actions">
           {isAvailable ? (
             <>
-              <button className="btn btn-outline product-card-btn" onClick={handleAdd}>
-                Add
-              </button>
+              {inCartQty > 0 ? (
+                <div
+                  className="product-card-stepper"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    className="product-card-step-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateQuantity(cartItem.key, inCartQty - 1);
+                    }}
+                    aria-label="Decrease quantity"
+                  >
+                    <HiMinus />
+                  </button>
+                  <span className="product-card-step-qty">{inCartQty}</span>
+                  <button
+                    type="button"
+                    className="product-card-step-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addToCart(product, weight, 1, displayPrice);
+                    }}
+                    aria-label="Increase quantity"
+                  >
+                    <HiPlus />
+                  </button>
+                </div>
+              ) : (
+                <button className="btn btn-outline product-card-btn" onClick={handleAdd}>
+                  Add
+                </button>
+              )}
               <button className="btn btn-primary product-card-btn" onClick={handleBuyNow}>
                 Buy Now
               </button>

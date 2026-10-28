@@ -1,8 +1,11 @@
 // PaymentScreen.jsx — ported from customer/src/pages/Payment.jsx.
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -57,6 +60,27 @@ export default function PaymentScreen() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [deliveryAreas, setDeliveryAreas] = useState([]);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollViewRef = useRef(null);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === "android" ? "keyboardDidShow" : "keyboardWillShow",
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "android" ? "keyboardDidHide" : "keyboardWillHide",
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     api
@@ -171,11 +195,33 @@ export default function PaymentScreen() {
   }
 
   const isFullyPaid = advancePercentage === 100;
+  const activeAreaNames = deliveryAreas.length > 0 ? deliveryAreas.map((a) => a.name) : undefined;
+  const isAddressServiceable = form.address.trim().length >= 3
+    ? isDeliveryAreaServiceable(form.address, activeAreaNames)
+    : null;
+
+  function scrollToBottom() {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 120);
+  }
 
   return (
     <View style={styles.screen}>
       <ScreenHeader title="Advance Payment" />
-      <ScrollView contentContainerStyle={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={[
+            styles.container,
+            { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 40 },
+          ]}
+        >
         <View style={styles.notice}>
           <Text style={styles.noticeText}>
             Pay a minimum of 25% advance to confirm your order — or pay more now, less on delivery.
@@ -187,6 +233,25 @@ export default function PaymentScreen() {
           <Text style={styles.bannerText}>
             Orders confirmed Saturday, delivered fresh Sunday morning.
           </Text>
+        </View>
+
+        <View style={styles.orderSummaryCard}>
+          <View style={styles.orderSummaryHeader}>
+            <Text style={styles.orderSummaryTitle}>Items in Order ({items.length})</Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Main", { screen: "Cart" })}>
+              <Text style={styles.orderSummaryEdit}>Edit Cart</Text>
+            </TouchableOpacity>
+          </View>
+          {items.map((item) => (
+            <View key={item.key} style={styles.orderItemRow}>
+              <Image source={{ uri: resolveImageUrl(item.image) }} style={styles.orderItemThumb} />
+              <View style={styles.orderItemInfo}>
+                <Text style={styles.orderItemName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.orderItemMeta}>{item.weight} × {item.quantity}</Text>
+              </View>
+              <Text style={styles.orderItemPrice}>₹{item.price * item.quantity}</Text>
+            </View>
+          ))}
         </View>
 
         {quoteError ? (
@@ -327,6 +392,7 @@ export default function PaymentScreen() {
             placeholder="10-digit mobile number"
             placeholderTextColor={colors.textMuted}
             keyboardType="phone-pad"
+            onFocus={scrollToBottom}
           />
 
           <Text style={styles.label}>Delivery Address</Text>
@@ -341,7 +407,26 @@ export default function PaymentScreen() {
             placeholderTextColor={colors.textMuted}
             multiline
             numberOfLines={3}
+            textAlignVertical="top"
+            scrollEnabled={false}
+            returnKeyType="default"
+            onFocus={scrollToBottom}
           />
+
+          {isAddressServiceable === true && (
+            <View style={styles.serviceableTagSuccess}>
+              <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
+              <Text style={styles.serviceableTagSuccessText}>Serviceable delivery area detected</Text>
+            </View>
+          )}
+          {isAddressServiceable === false && (
+            <View style={styles.serviceableTagWarning}>
+              <Ionicons name="alert-circle-outline" size={14} color="#C62828" />
+              <Text style={styles.serviceableTagWarningText}>
+                Please include Tadepalli, Kunchanapalli, Undavalli, or Nulakapeta
+              </Text>
+            </View>
+          )}
 
           {!ONLINE_PAYMENTS_DISABLED && (
             <>
@@ -352,6 +437,7 @@ export default function PaymentScreen() {
                 onChangeText={(v) => setField("transactionId", v)}
                 placeholder="UPI reference / transaction ID"
                 placeholderTextColor={colors.textMuted}
+                onFocus={scrollToBottom}
               />
             </>
           )}
@@ -380,6 +466,7 @@ export default function PaymentScreen() {
           )}
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -728,5 +815,92 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 19,
     maxWidth: 280,
+  },
+  orderSummaryCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    ...shadow.sm,
+  },
+  orderSummaryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.xs,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  orderSummaryTitle: {
+    fontSize: 13,
+    fontFamily: typography.body.bold,
+    color: colors.text,
+  },
+  orderSummaryEdit: {
+    fontSize: 12,
+    fontFamily: typography.body.semibold,
+    color: colors.primary,
+  },
+  orderItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    gap: spacing.sm,
+  },
+  orderItemThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.bg,
+  },
+  orderItemInfo: {
+    flex: 1,
+  },
+  orderItemName: {
+    fontSize: 13,
+    fontFamily: typography.body.semibold,
+    color: colors.text,
+  },
+  orderItemMeta: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  orderItemPrice: {
+    fontSize: 13,
+    fontFamily: typography.body.bold,
+    color: colors.text,
+  },
+  serviceableTagSuccess: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#E8F5E9",
+    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 6,
+  },
+  serviceableTagSuccessText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#2E7D32",
+  },
+  serviceableTagWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FDE7E7",
+    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 6,
+  },
+  serviceableTagWarningText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#C62828",
+    flexShrink: 1,
   },
 });

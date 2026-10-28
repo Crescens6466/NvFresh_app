@@ -142,3 +142,41 @@
   cursor: not-allowed;
   opacity: 0.85;
 }
+
+.product-card-stepper {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  padding: 0 4px;
+  height: 35px;
+  box-sizing: border-box;
+}
+
+.product-card-step-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font-size: 0.85rem;
+  transition: background 0.15s ease;
+}
+
+.product-card-step-btn:hover {
+  background: var(--bg);
+}
+
+.product-card-step-qty {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  min-width: 16px;
+  text-align: center;
+}

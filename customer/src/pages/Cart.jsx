@@ -35,6 +35,14 @@ export default function Cart() {
     unavailableProductIds.has(String(item.productId))
   );
 
+  function handleRemoveAllUnavailable() {
+    items.forEach((item) => {
+      if (unavailableProductIds.has(String(item.productId))) {
+        removeFromCart(item.key);
+      }
+    });
+  }
+
   function handleCheckout() {
     if (hasUnavailableItems) return;
     if (isLoggedIn) {
@@ -128,6 +136,13 @@ export default function Cart() {
         <div className="cart-unavailable-warning">
           <strong>Some items in your cart are currently unavailable.</strong>
           <p>Please remove them from your cart to proceed with checkout.</p>
+          <button
+            type="button"
+            className="cart-remove-unavailable-btn"
+            onClick={handleRemoveAllUnavailable}
+          >
+            Remove All Unavailable Items
+          </button>
         </div>
       )}
 

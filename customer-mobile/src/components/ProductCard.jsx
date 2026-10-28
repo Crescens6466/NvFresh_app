@@ -20,11 +20,14 @@ export default function ProductCard({ product }) {
   const [weight, setWeight] = useState(product?.weights?.[1] || product?.weights?.[0] || "1 kg");
   const [liked, setLiked] = useState(false);
   const navigation = useNavigation();
-  const { addToCart } = useCart();
+  const { items, addToCart, updateQuantity } = useCart();
   const { showToast } = useToast();
 
   const isAvailable = product.isAvailable !== false;
   const displayPrice = priceForWeight(product.price, weight);
+
+  const cartItem = items.find((i) => i.productId === product.id && i.weight === weight);
+  const inCartQty = cartItem ? cartItem.quantity : 0;
 
   function handleAdd() {
     if (!isAvailable) return;
@@ -34,7 +37,9 @@ export default function ProductCard({ product }) {
 
   function handleBuyNow() {
     if (!isAvailable) return;
-    addToCart(product, weight, 1, displayPrice);
+    if (inCartQty === 0) {
+      addToCart(product, weight, 1, displayPrice);
+    }
     navigation.navigate("Main", { screen: "Cart" });
   }
 
@@ -78,9 +83,29 @@ export default function ProductCard({ product }) {
         <View style={styles.actions}>
           {isAvailable ? (
             <>
-              <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={handleAdd}>
-                <Text style={styles.btnOutlineText}>Add</Text>
-              </TouchableOpacity>
+              {inCartQty > 0 ? (
+                <View style={styles.stepperWrap}>
+                  <TouchableOpacity
+                    style={styles.stepperBtn}
+                    onPress={() => updateQuantity(cartItem.key, inCartQty - 1)}
+                    accessibilityLabel="Decrease quantity"
+                  >
+                    <Ionicons name="remove" size={14} color={colors.primary} />
+                  </TouchableOpacity>
+                  <Text style={styles.stepperText}>{inCartQty}</Text>
+                  <TouchableOpacity
+                    style={styles.stepperBtn}
+                    onPress={() => addToCart(product, weight, 1, displayPrice)}
+                    accessibilityLabel="Increase quantity"
+                  >
+                    <Ionicons name="add" size={14} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={handleAdd}>
+                  <Text style={styles.btnOutlineText}>Add</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity style={[styles.btn, styles.btnPrimary]} onPress={handleBuyNow}>
                 <Text style={styles.btnPrimaryText}>Buy Now</Text>
               </TouchableOpacity>
@@ -131,11 +156,35 @@ const styles = StyleSheet.create({
   price: { fontFamily: typography.display.bold, fontSize: 16, color: colors.primary, marginTop: 2 },
   unit: { fontSize: 11, fontFamily: typography.body.medium, color: colors.textMuted },
   actions: { flexDirection: "row", gap: 8, marginTop: 2 },
-  btn: { flex: 1, paddingVertical: 9, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  btn: { flex: 1, height: 36, paddingVertical: 0, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
   btnOutline: { borderWidth: 1.5, borderColor: colors.primary },
   btnOutlineText: { color: colors.primary, fontFamily: typography.body.bold, fontSize: 12 },
   btnPrimary: { backgroundColor: colors.primary, ...shadow.sm },
   btnPrimaryText: { color: colors.white, fontFamily: typography.body.bold, fontSize: 12 },
   btnDisabled: { backgroundColor: "#F0DFD9", borderWidth: 1, borderColor: "#E0CCC5" },
   btnDisabledText: { color: colors.textMuted, fontFamily: typography.body.bold, fontSize: 12 },
+  stepperWrap: {
+    flex: 1,
+    height: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: radius.sm,
+    backgroundColor: colors.white,
+    paddingHorizontal: 4,
+  },
+  stepperBtn: {
+    padding: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepperText: {
+    fontSize: 13,
+    fontFamily: typography.body.bold,
+    color: colors.primary,
+    minWidth: 16,
+    textAlign: "center",
+  },
 });

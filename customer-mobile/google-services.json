@@ -7,15 +7,27 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:725533349098:web:d536197e176c00a160f393",
+        "mobilesdk_app_id": "1:725533349098:android:df67a0afc50c3dfb60f393",
         "android_client_info": {
           "package_name": "com.nvfresh.customer"
         }
       },
       "oauth_client": [
         {
+          "client_id": "725533349098-d7oc2tqfts5ml1achqbrejr0ge8ob57k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nvfresh.customer",
+            "certificate_hash": "b201b8de2f86d646dcd170b654f191565169a544"
+          }
+        },
+        {
           "client_id": "725533349098-s259ftv4rljkpe61v536fg3k649bspsq.apps.googleusercontent.com",
-          "client_type": 1
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nvfresh.customer",
+            "certificate_hash": "a4f2f48a44819d1f9fedf25849b761c853672b97"
+          }
         },
         {
           "client_id": "725533349098-2t144i5kjg9n4rdr1p0ojbfgtcpkhn93.apps.googleusercontent.com",
@@ -24,10 +36,20 @@
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyCbpY8Pl4To2Jc1xaECOJBUtuD3p2cjLMk"
+          "current_key": "AIzaSyAK4ymb-vNj3-co4h4nxezF8r4bdMRBbO0"
         }
       ],
-      "services": {}
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "725533349098-2t144i5kjg9n4rdr1p0ojbfgtcpkhn93.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
-  ]
+  ],
+  "configuration_version": "1"
 }

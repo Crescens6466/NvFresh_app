@@ -60,19 +60,25 @@ export default function ProfileScreen() {
         )}
       </TouchableOpacity>
 
-      <View style={styles.quickRow}>
-        <TouchableOpacity
-          style={styles.quickItem}
-          onPress={() => navigation.navigate(isLoggedIn ? "OrderHistory" : "Login", isLoggedIn ? undefined : { from: { name: "OrderHistory" } })}
-        >
-          <Ionicons name="clipboard-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickLabel}>My Orders</Text>
-        </TouchableOpacity>
-        <View style={styles.quickItem}>
-          <Ionicons name="location-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickLabel}>Addresses</Text>
+      <TouchableOpacity
+        style={styles.ordersCard}
+        activeOpacity={0.8}
+        onPress={() =>
+          navigation.navigate(
+            isLoggedIn ? "OrderHistory" : "Login",
+            isLoggedIn ? undefined : { from: { name: "OrderHistory" } }
+          )
+        }
+      >
+        <View style={styles.ordersIconWrap}>
+          <Ionicons name="clipboard-outline" size={22} color={colors.primary} />
         </View>
-      </View>
+        <View style={styles.ordersInfo}>
+          <Text style={styles.ordersTitle}>My Orders</Text>
+          <Text style={styles.ordersSubtitle}>View past orders & track status</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      </TouchableOpacity>
 
       <View style={styles.links}>
         {LINKS.map(({ screen, label, icon }) => (
@@ -96,10 +102,38 @@ const styles = StyleSheet.create({
   avatar: { width: 56, height: 56, borderRadius: radius.pill, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" },
   name: { fontSize: 16, fontFamily: typography.display.bold, color: colors.text },
   sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-  quickRow: { flexDirection: "row", gap: spacing.md, marginTop: spacing.lg },
-  quickItem: { flex: 1, alignItems: "center", gap: 6, backgroundColor: colors.card, borderRadius: radius.md, paddingVertical: spacing.lg, ...shadow.sm },
-  quickLabel: { fontSize: 12, fontFamily: typography.body.semibold, color: colors.text },
-  links: { marginTop: spacing.lg, backgroundColor: colors.card, borderRadius: radius.md, ...shadow.sm },
+  ordersCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.md,
+    ...shadow.sm,
+  },
+  ordersIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    backgroundColor: "#FFF1EC",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ordersInfo: {
+    flex: 1,
+  },
+  ordersTitle: {
+    fontSize: 15,
+    fontFamily: typography.display.bold,
+    color: colors.text,
+  },
+  ordersSubtitle: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  links: { marginTop: spacing.md, backgroundColor: colors.card, borderRadius: radius.md, ...shadow.sm },
   link: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
   linkLabel: { flex: 1, fontSize: 14, fontFamily: typography.body.semibold, color: colors.text },
   version: { textAlign: "center", fontSize: 11, color: colors.textMuted, marginTop: spacing.xl },

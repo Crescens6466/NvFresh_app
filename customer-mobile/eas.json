@@ -39,6 +39,24 @@
         "EXPO_PUBLIC_MSG91_WIDGET_ID": "36696568466c393032313039",
         "EXPO_PUBLIC_MSG91_TOKEN_AUTH": "565521T4ixpmndRpa6a98f99eP1"
       }
+    }, 
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://nv-fresh-app-x1mc.vercel.app/api",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCbpY8Pl4To2Jc1xaECOJBUtuD3p2cjLMk",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "nvfresh-da6d8.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "nvfresh-da6d8",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "nvfresh-da6d8.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "725533349098",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:725533349098:web:d536197e176c00a160f393",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "725533349098-2t144i5kjg9n4rdr1p0ojbfgtcpkhn93.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "725533349098-s259ftv4rljkpe61v536fg3k649bspsq.apps.googleusercontent.com",
+        "EXPO_PUBLIC_MSG91_WIDGET_ID": "36696568466c393032313039",
+        "EXPO_PUBLIC_MSG91_TOKEN_AUTH": "565521T4ixpmndRpa6a98f99eP1"
+      }
     }
   },
   "submit": {

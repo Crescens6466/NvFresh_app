@@ -1,6 +1,14 @@
 // LoginScreen.jsx — ported from customer/src/pages/Login.jsx.
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
@@ -118,81 +126,92 @@ export default function LoginScreen() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="Sign In" />
-      <Text style={styles.subtitle}>Sign in to place orders and track your order status.</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scrollContent}
+        >
+          <Text style={styles.subtitle}>Sign in to place orders and track your order status.</Text>
 
-      <Button
-        title={googleLoading ? "Signing in..." : "Continue with Google"}
-        variant="outline"
-        onPress={handleGoogle}
-        disabled={googleLoading}
-        icon={<Ionicons name="logo-google" size={18} color={colors.primary} />}
-        style={styles.section}
-      />
+          <Button
+            title={googleLoading ? "Signing in..." : "Continue with Google"}
+            variant="outline"
+            onPress={handleGoogle}
+            disabled={googleLoading}
+            icon={<Ionicons name="logo-google" size={18} color={colors.primary} />}
+            style={styles.section}
+          />
 
-      <View style={[styles.divider, styles.section]}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or</Text>
-        <View style={styles.dividerLine} />
-      </View>
+          <View style={[styles.divider, styles.section]}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
 
-      {!otpSent ? (
-        <View style={styles.section}>
-          <Text style={styles.label}>Mobile Number</Text>
-          <TextInput
-            style={styles.input}
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="10-digit mobile number"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
-            maxLength={10}
-          />
-          <Button
-            title={sending ? "Sending OTP..." : "Send OTP via SMS"}
-            onPress={handleSendOtp}
-            disabled={sending}
-            style={{ marginTop: spacing.md }}
-          />
-        </View>
-      ) : (
-        <View style={styles.section}>
-          <Text style={styles.label}>Enter OTP (sent via SMS)</Text>
-          <TextInput
-            style={styles.input}
-            value={otp}
-            onChangeText={setOtp}
-            placeholder="6-digit code"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
-            maxLength={6}
-          />
-          <Button title={verifying ? "Verifying..." : "Verify OTP"} onPress={handleVerifyOtp} disabled={verifying} style={{ marginTop: spacing.md }} />
-          <Button
-            title={resendButtonTitle}
-            variant={resendLimitReached ? "ghost" : "outline"}
-            onPress={handleResendOtp}
-            disabled={sending || resendCountdown > 0 || resendLimitReached}
-            style={{ marginTop: spacing.sm }}
-          />
-          <Button
-            title="Change number"
-            variant="ghost"
-            onPress={() => {
-              setOtpSent(false);
-              setOtp("");
-              setResendAttempts(0);
-              setResendCountdown(15);
-            }}
-            style={{ marginTop: spacing.sm }}
-          />
-        </View>
-      )}
+          {!otpSent ? (
+            <View style={styles.section}>
+              <Text style={styles.label}>Mobile Number</Text>
+              <TextInput
+                style={styles.input}
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="10-digit mobile number"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="number-pad"
+                maxLength={10}
+              />
+              <Button
+                title={sending ? "Sending OTP..." : "Send OTP via SMS"}
+                onPress={handleSendOtp}
+                disabled={sending}
+                style={{ marginTop: spacing.md }}
+              />
+            </View>
+          ) : (
+            <View style={styles.section}>
+              <Text style={styles.label}>Enter OTP (sent via SMS)</Text>
+              <TextInput
+                style={styles.input}
+                value={otp}
+                onChangeText={setOtp}
+                placeholder="6-digit code"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="number-pad"
+                maxLength={6}
+              />
+              <Button title={verifying ? "Verifying..." : "Verify OTP"} onPress={handleVerifyOtp} disabled={verifying} style={{ marginTop: spacing.md }} />
+              <Button
+                title={resendButtonTitle}
+                variant={resendLimitReached ? "ghost" : "outline"}
+                onPress={handleResendOtp}
+                disabled={sending || resendCountdown > 0 || resendLimitReached}
+                style={{ marginTop: spacing.sm }}
+              />
+              <Button
+                title="Change number"
+                variant="ghost"
+                onPress={() => {
+                  setOtpSent(false);
+                  setOtp("");
+                  setResendAttempts(0);
+                  setResendCountdown(15);
+                }}
+                style={{ marginTop: spacing.sm }}
+              />
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
+  scrollContent: { paddingBottom: 40 },
   subtitle: { paddingHorizontal: spacing.lg, color: colors.textMuted, fontSize: 13 },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
   divider: { flexDirection: "row", alignItems: "center", gap: spacing.md },
