@@ -14,36 +14,68 @@ const CATS = [
 
 export default function Categories() {
   const [counts, setCounts] = useState({});
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.getProducts().then((products) => {
-      const c = {};
-      products.forEach((p) => {
-        c[p.category] = (c[p.category] || 0) + 1;
+    let isMounted = true;
+    api
+      .getProducts()
+      .then((products) => {
+        if (!isMounted) return;
+        const c = {};
+        if (Array.isArray(products)) {
+          products.forEach((p) => {
+            if (p && p.isAvailable !== false && p.category) {
+              c[p.category] = (c[p.category] || 0) + 1;
+            }
+          });
+        }
+        setCounts(c);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setCounts({});
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
       });
-      setCounts(c);
-    });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
     <div className="categories page-fade">
       <h2 className="categories-title">Shop by Category</h2>
       <div className="categories-grid">
-        {CATS.map(({ name, Icon, color }) => (
-          <button
-            key={name}
-            className="category-card"
-            onClick={() => navigate(`/?category=${encodeURIComponent(name)}`)}
-            style={{ "--cat-color": color }}
-          >
-            <div className="category-card-icon">
-              <Icon />
-            </div>
-            <h4>{name}</h4>
-            <p>{counts[name] || 0} items</p>
-          </button>
-        ))}
+        {CATS.map(({ name, Icon, color }) => {
+          const count = counts[name] || 0;
+          const isUnavailable = !loading && count === 0;
+
+          return (
+            <button
+              key={name}
+              className={`category-card ${isUnavailable ? "is-unavailable" : ""}`}
+              onClick={() => navigate(`/?category=${encodeURIComponent(name)}`)}
+              style={{ "--cat-color": color }}
+              type="button"
+            >
+              <div className="category-card-icon">
+                <Icon />
+              </div>
+              <h4>{name}</h4>
+              <p className={`category-card-meta ${isUnavailable ? "is-unavailable" : ""}`}>
+                {loading
+                  ? "…"
+                  : isUnavailable
+                  ? "Currently unavailable"
+                  : `${count} ${count === 1 ? "item" : "items"}`}
+              </p>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

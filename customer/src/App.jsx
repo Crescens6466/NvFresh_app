@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Header from "./components/Header.jsx";
 import AnnouncementBanner from "./components/AnnouncementBanner.jsx";
 import BottomNav from "./components/BottomNav.jsx";
@@ -20,10 +20,6 @@ import CustomerNotifications from "./pages/CustomerNotifications.jsx";
 import CustomerNotificationPrompt from "./components/CustomerNotificationPrompt.jsx";
 
 export default function App() {
-  const location = useLocation();
-  // Payment, order-success & login get a focused flow without the bottom nav.
-  const hideNav = ["/payment", "/order-success", "/login"].includes(location.pathname);
-
   return (
     <div className="app-shell">
       <Header />
@@ -47,7 +43,7 @@ export default function App() {
           <Route path="/terms" element={<Terms />} />
         </Routes>
       </main>
-      {!hideNav && <BottomNav />}
+      <BottomNav />
     </div>
   );
 }

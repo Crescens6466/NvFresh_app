@@ -27,12 +27,21 @@
   height: 100%;
 }
 
+.bottom-nav-link.active,
+.bottom-nav-link.is-active {
+  color: var(--primary);
+}
+
 .bottom-nav-icon-wrap {
   font-size: 1.35rem;
   display: flex;
   position: relative;
   color: inherit;
   transition: transform 0.2s ease;
+}
+
+.bottom-nav-icon-wrap.is-active {
+  color: var(--primary);
 }
 
 .bottom-nav-link:active .bottom-nav-icon-wrap {
