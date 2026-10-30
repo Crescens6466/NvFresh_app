@@ -29,6 +29,14 @@ const app = express();
 app.set("trust proxy", true);
 
 app.use(cors());
+
+// Razorpay webhook endpoints must receive the exact unparsed raw body as a Buffer
+// before any JSON parsing occurs, for cryptographic HMAC-SHA256 signature verification.
+app.use(
+  ["/api/webhook", "/api/payment/webhook"],
+  express.raw({ type: "*/*" })
+);
+
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

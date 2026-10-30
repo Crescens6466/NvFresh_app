@@ -145,6 +145,7 @@ export default function Payment() {
 
   // Razorpay standard checkout flow
   async function handleRazorpayCheckout() {
+    if (submitting) return;
     if (!form.name || !form.phone || !form.address) {
       showToast("Please enter your name, phone number, and delivery address", "error");
       return;
@@ -170,17 +171,21 @@ export default function Payment() {
       const createOrderPayload = {
         items: items.map((i) => ({ productId: i.productId, weight: i.weight, quantity: i.quantity })),
         advancePercentage,
+        customerName: form.name.trim(),
+        phone: form.phone.trim(),
+        address: form.address.trim(),
         amount: Math.round(quote.advanceAmount * 100),
       };
 
       const razorpayOrder = await api.createRazorpayOrder(createOrderPayload, token);
-      if (!razorpayOrder?.orderId) {
+      const rzpOrderId = razorpayOrder?.order_id || razorpayOrder?.orderId;
+      if (!rzpOrderId) {
         throw new Error("Could not initialize payment order.");
       }
 
-      const rzpKey = razorpayOrder.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID;
+      const rzpKey = razorpayOrder?.key_id || razorpayOrder?.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID;
       if (!rzpKey) {
-        throw new Error("Razorpay Key ID is not configured.");
+        throw new Error("Razorpay Key ID is not configured on the server.");
       }
 
       const options = {
@@ -188,11 +193,11 @@ export default function Payment() {
         amount: razorpayOrder.amount,
         currency: razorpayOrder.currency || "INR",
         name: "NvFresh",
-        description: `Advance Payment (${advancePercentage}%)`,
-        order_id: razorpayOrder.orderId,
+        description: isFullyPaid ? "Full Payment (100%)" : `Advance Payment (${advancePercentage}%)`,
+        order_id: rzpOrderId,
         prefill: {
-          name: form.name ? form.name.trim() : "",
-          contact: form.phone ? form.phone.trim() : "",
+          name: form.name ? form.name.trim() : (profile?.name || ""),
+          contact: form.phone ? form.phone.trim() : (profile?.phone || ""),
           email: profile?.email || "",
         },
         notes: {
@@ -217,9 +222,9 @@ export default function Payment() {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
                 orderData: {
-                  customerName: form.name,
-                  phone: form.phone,
-                  address: form.address,
+                  customerName: form.name.trim(),
+                  phone: form.phone.trim(),
+                  address: form.address.trim(),
                   items: items.map((i) => ({ productId: i.productId, weight: i.weight, quantity: i.quantity })),
                   advancePercentage,
                 },
@@ -242,7 +247,7 @@ export default function Payment() {
       rzp.on("payment.failed", (response) => {
         setSubmitting(false);
         const reason = response.error?.description || response.error?.reason || "Payment failed or was cancelled.";
-        showToast(reason, "error");
+        showToast(`Payment failed: ${reason}`, "error");
       });
 
       rzp.open();
@@ -294,6 +299,7 @@ export default function Payment() {
 
   function handleSubmit(e) {
     e.preventDefault();
+    if (submitting) return;
     if (paymentMethod === "razorpay") {
       handleRazorpayCheckout();
     } else {

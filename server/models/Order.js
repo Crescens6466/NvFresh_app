@@ -40,7 +40,13 @@ const orderSchema = new mongoose.Schema(
     payment_reference: { type: String, default: null, index: true },
     payment_method: { type: String, enum: ["upi_qr", "razorpay"], default: "upi_qr" },
     razorpay_order_id: { type: String, default: null, index: true },
-    razorpay_payment_id: { type: String, default: null, index: true },
+    razorpay_payment_id: {
+      type: String,
+      default: null,
+      sparse: true,
+      unique: true,
+      index: true,
+    },
     razorpay_signature: { type: String, default: null },
     admin_sms_notification: {
       status: {
