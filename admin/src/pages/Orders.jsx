@@ -13,15 +13,39 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("All");
 
-  function loadOrders() {
-    setLoading(true);
+  function loadOrders(silent = false) {
+    if (!silent) setLoading(true);
     api
       .getOrders()
       .then(setOrders)
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
   }
 
-  useEffect(loadOrders, []);
+  useEffect(() => {
+    loadOrders();
+
+    const handleNewOrderNotification = (e) => {
+      if (!e.detail || e.detail.type === "new_order" || e.detail.orderId) {
+        loadOrders(true);
+      }
+    };
+
+    window.addEventListener("admin-notifications-received", handleNewOrderNotification);
+    window.addEventListener("admin-notifications-updated", handleNewOrderNotification);
+
+    // Periodic silent background refresh so new orders appear even if websocket drops
+    const interval = window.setInterval(() => {
+      loadOrders(true);
+    }, 30000);
+
+    return () => {
+      window.removeEventListener("admin-notifications-received", handleNewOrderNotification);
+      window.removeEventListener("admin-notifications-updated", handleNewOrderNotification);
+      window.clearInterval(interval);
+    };
+  }, []);
 
   async function handleStatusChange(id, status) {
     let reason;

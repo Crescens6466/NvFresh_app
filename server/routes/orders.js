@@ -60,12 +60,25 @@ export function notifyAndRecord(orderId, notifierPromise) {
     .catch((err) => console.error("[orders] Could not record WhatsApp notification:", err.message));
 }
 
-export async function sendAdminOrderTelegramOnce(orderId, order) {
+export function safeWaitUntil(task) {
+  if (!task) return;
   try {
+    waitUntil(task);
+  } catch {
+    Promise.resolve(task).catch(() => {});
+  }
+}
+
+export async function sendAdminOrderTelegramOnce(orderId, order, allowRetry = true) {
+  try {
+      const statusQuery = allowRetry
+        ? { $in: ["pending", "failed"] }
+        : "pending";
+
       const claimedOrder = await Order.findOneAndUpdate(
         {
           _id: orderId,
-          "admin_telegram_notification.status": "pending",
+          "admin_telegram_notification.status": statusQuery,
         },
         {
           $set: {
@@ -111,14 +124,71 @@ export async function sendAdminOrderTelegramOnce(orderId, order) {
   }
 }
 
+export async function sendAdminOrderNotificationsOnce(orderId, clientOrder, isRazorpay = false) {
+  if (!orderId || !clientOrder) return;
+
+  // 1. Telegram notification (atomic status lock inside sendAdminOrderTelegramOnce prevents duplicates)
+  safeWaitUntil(
+    sendAdminOrderTelegramOnce(orderId, {
+      id: clientOrder.id,
+      total: clientOrder.total,
+      customer_name: clientOrder.customer_name,
+      phone: clientOrder.phone,
+    })
+  );
+
+  // 2. WhatsApp Admin Alert
+  Settings.findOne()
+    .then((settings) => notifyAndRecord(orderId, sendAdminOrderAlert(clientOrder, settings?.phone_number)))
+    .catch((err) => console.error("[notify] Could not load Settings for admin alert:", err.message));
+
+  // 3. Admin in-app notification + Realtime Socket.IO (Idempotent: at most once per order)
+  Promise.resolve()
+    .then(async () => {
+      const existing = await Notification.findOne({ orderId, type: "new_order" });
+      if (!existing) {
+        const admins = await Admin.find().select("_id").lean();
+        if (admins.length > 0) {
+          const title = isRazorpay ? "New Order (Razorpay Paid)" : "New Order Received";
+          const message = isRazorpay
+            ? `Order #${clientOrder.id} • ₹${clientOrder.total} (Advance Paid ₹${clientOrder.advance_paid})`
+            : `Order #${clientOrder.id} • ₹${clientOrder.total}`;
+
+          const createdNotifications = await Notification.insertMany(
+            admins.map((admin) => ({
+              recipientAdmin: admin._id,
+              type: "new_order",
+              title,
+              message,
+              orderId,
+            }))
+          );
+
+          createdNotifications.forEach((notification, index) =>
+            emitAdminNotification(String(admins[index]._id), {
+              id: String(notification._id),
+              type: "new_order",
+              title,
+              message,
+              orderId: String(orderId),
+              createdAt: notification.createdAt.toISOString(),
+              isRead: false,
+            })
+          );
+        }
+      }
+    })
+    .catch((err) => console.error("[admin-notifications] Could not save notification:", err.message))
+    .finally(() =>
+      sendAdminNewOrderNotification(clientOrder).catch((err) =>
+        console.error("[fcm] Could not send admin new-order notification:", err.message)
+      )
+    );
+}
+
 export function scheduleCustomerOrderNotification(customerUid, orderId, type) {
   const task = createAndSendCustomerOrderNotification({ customerUid, orderId, type });
-  try {
-    waitUntil(task);
-  } catch (err) {
-    console.warn("[customer-notifications] Vercel waitUntil unavailable; continuing best-effort:", err.message);
-    void task;
-  }
+  safeWaitUntil(task);
 }
 
 // POST /api/orders/quote — live preview of totals + a dynamic QR for the
@@ -238,46 +308,7 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
     if (process.env.WHATSAPP_SEND_CUSTOMER_CONFIRMATION === "true") {
       notifyAndRecord(order._id, sendOrderConfirmation(clientOrder));
     }
-    Settings.findOne()
-      .then((settings) => notifyAndRecord(order._id, sendAdminOrderAlert(clientOrder, settings?.phone_number)))
-      .catch((err) => console.error(`[notify] Could not load Settings for admin alert:`, err.message));
-    waitUntil(sendAdminOrderTelegramOnce(order._id, {
-      id: clientOrder.id,
-      total: clientOrder.total,
-      customer_name: clientOrder.customer_name,
-      phone: clientOrder.phone,
-    }));
-    Promise.resolve()
-      .then(async () => {
-        const admins = await Admin.find().select("_id").lean();
-        const createdNotifications = await Notification.insertMany(
-          admins.map((admin) => ({
-            recipientAdmin: admin._id,
-            type: "new_order",
-            title: "New Order Received",
-            message: `Order #${clientOrder.id} • ₹${clientOrder.total}`,
-            orderId: order._id,
-          }))
-        );
-        console.info(`[admin-notifications] Order notification created for ${admins.length} admin(s)`);
-        createdNotifications.forEach((notification, index) =>
-          emitAdminNotification(String(admins[index]._id), {
-            id: String(notification._id),
-            type: "new_order",
-            title: "New Order Received",
-            message: `Order #${clientOrder.id} • ₹${clientOrder.total}`,
-            orderId: String(order._id),
-            createdAt: notification.createdAt.toISOString(),
-            isRead: false,
-          })
-        );
-      })
-      .catch((err) => console.error("[admin-notifications] Could not save notification:", err.message))
-      .finally(() =>
-        sendAdminNewOrderNotification(clientOrder).catch((err) =>
-          console.error("[fcm] Could not send admin new-order notification:", err.message)
-        )
-      );
+    safeWaitUntil(sendAdminOrderNotificationsOnce(order._id, clientOrder, false));
 
     res.status(201).json(clientOrder);
   } catch (err) {

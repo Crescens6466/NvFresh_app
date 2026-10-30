@@ -297,6 +297,10 @@
   gap: 10px;
 }
 
+.payment-method-tabs.is-single {
+  grid-template-columns: 1fr;
+}
+
 .payment-method-tab {
   background: var(--card);
   border: 1.5px solid var(--border);
@@ -308,6 +312,10 @@
   gap: 4px;
   transition: all 0.15s ease;
   cursor: pointer;
+}
+
+.payment-method-tab.is-single {
+  cursor: default;
 }
 
 .payment-method-tab.is-active {

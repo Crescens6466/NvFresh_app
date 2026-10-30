@@ -417,28 +417,13 @@ export default function Payment() {
 
       <div className="payment-method-section">
         <h3 className="payment-method-heading">Payment Method</h3>
-        <div className="payment-method-tabs">
-          <button
-            type="button"
-            className={`payment-method-tab ${paymentMethod === "razorpay" ? "is-active" : ""}`}
-            onClick={() => setPaymentMethod("razorpay")}
-          >
+        <div className="payment-method-tabs is-single">
+          <div className="payment-method-tab is-active is-single">
             <span className="payment-method-tab-title">
               <HiOutlineCreditCard className="payment-method-icon" /> Pay Online
             </span>
             <span className="payment-method-tab-sub">UPI Apps, Cards, NetBanking (Razorpay)</span>
-          </button>
-
-          <button
-            type="button"
-            className={`payment-method-tab ${paymentMethod === "qr" ? "is-active" : ""}`}
-            onClick={() => setPaymentMethod("qr")}
-          >
-            <span className="payment-method-tab-title">
-              <HiOutlineQrCode className="payment-method-icon" /> UPI QR Code
-            </span>
-            <span className="payment-method-tab-sub">Scan QR & enter transaction ID</span>
-          </button>
+          </div>
         </div>
       </div>
 

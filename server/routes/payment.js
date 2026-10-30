@@ -29,7 +29,9 @@ import { emitAdminNotification } from "../realtime.js";
 import {
   notifyAndRecord,
   sendAdminOrderTelegramOnce,
+  sendAdminOrderNotificationsOnce,
   scheduleCustomerOrderNotification,
+  safeWaitUntil,
 } from "./orders.js";
 import {
   isDeliveryAreaServiceableAsync,
@@ -326,11 +328,17 @@ router.post("/verify-payment", optionalCustomerAuth, async (req, res, next) => {
       ],
     });
     if (duplicate) {
+      if (!duplicate.razorpay_signature && razorpay_signature) {
+        duplicate.razorpay_signature = razorpay_signature;
+        await duplicate.save();
+      }
+      const clientOrder = toClient(duplicate);
+      safeWaitUntil(sendAdminOrderNotificationsOnce(duplicate._id, clientOrder, true));
       return res.json({
         verified: true,
         success: true,
         message: "Payment already verified",
-        order: toClient(duplicate),
+        order: clientOrder,
       });
     }
 
@@ -438,6 +446,7 @@ router.post("/verify-payment", optionalCustomerAuth, async (req, res, next) => {
       clientOrder = toClient(existing);
       scheduleCustomerOrderNotification(existing.customer_uid, existing._id, "payment_confirmed");
       notifyAndRecord(existing._id, sendPaymentConfirmedNotification(clientOrder));
+      safeWaitUntil(sendAdminOrderNotificationsOnce(existing._id, clientOrder, true));
     } else {
       const { customerName, phone, address, items, advancePercentage } = orderData;
       const { resolvedItems, subtotal, deliveryCharge, total } = await computeOrderTotals(items);
@@ -479,10 +488,17 @@ router.post("/verify-payment", optionalCustomerAuth, async (req, res, next) => {
             $or: [{ transaction_id: razorpay_payment_id }, { razorpay_payment_id }],
           });
           if (existingOrder) {
+            if (!existingOrder.razorpay_signature && razorpay_signature) {
+              existingOrder.razorpay_signature = razorpay_signature;
+              await existingOrder.save();
+            }
+            const existingClientOrder = toClient(existingOrder);
+            safeWaitUntil(sendAdminOrderNotificationsOnce(existingOrder._id, existingClientOrder, true));
             return res.json({
+              verified: true,
               success: true,
               message: "Payment already verified",
-              order: toClient(existingOrder),
+              order: existingClientOrder,
             });
           }
         }
@@ -498,7 +514,7 @@ router.post("/verify-payment", optionalCustomerAuth, async (req, res, next) => {
 
       clientOrder = toClient(order);
 
-      // Notifications
+      // Customer Notifications
       if (customerUid) {
         scheduleCustomerOrderNotification(customerUid, order._id, "order_placed");
         scheduleCustomerOrderNotification(customerUid, order._id, "payment_confirmed");
@@ -509,49 +525,8 @@ router.post("/verify-payment", optionalCustomerAuth, async (req, res, next) => {
       }
       notifyAndRecord(order._id, sendPaymentConfirmedNotification(clientOrder));
 
-      Settings.findOne()
-        .then((settings) => notifyAndRecord(order._id, sendAdminOrderAlert(clientOrder, settings?.phone_number)))
-        .catch((err) => console.error("[notify] Could not load Settings for admin alert:", err.message));
-
-      waitUntil(
-        sendAdminOrderTelegramOnce(order._id, {
-          id: clientOrder.id,
-          total: clientOrder.total,
-          customer_name: clientOrder.customer_name,
-          phone: clientOrder.phone,
-        })
-      );
-
-      Promise.resolve()
-        .then(async () => {
-          const admins = await Admin.find().select("_id").lean();
-          const createdNotifications = await Notification.insertMany(
-            admins.map((admin) => ({
-              recipientAdmin: admin._id,
-              type: "new_order",
-              title: "New Order (Razorpay Paid)",
-              message: `Order #${clientOrder.id} • ₹${clientOrder.total} (Advance Paid ₹${clientOrder.advance_paid})`,
-              orderId: order._id,
-            }))
-          );
-          createdNotifications.forEach((notification, index) =>
-            emitAdminNotification(String(admins[index]._id), {
-              id: String(notification._id),
-              type: "new_order",
-              title: "New Order (Razorpay Paid)",
-              message: `Order #${clientOrder.id} • ₹${clientOrder.total} (Advance Paid ₹${clientOrder.advance_paid})`,
-              orderId: String(order._id),
-              createdAt: notification.createdAt.toISOString(),
-              isRead: false,
-            })
-          );
-        })
-        .catch((err) => console.error("[admin-notifications] Could not save notification:", err.message))
-        .finally(() =>
-          sendAdminNewOrderNotification(clientOrder).catch((err) =>
-            console.error("[fcm] Could not send admin new-order notification:", err.message)
-          )
-        );
+      // Admin Notifications: Telegram, In-App Notification, Socket.IO, FCM, WhatsApp
+      safeWaitUntil(sendAdminOrderNotificationsOnce(order._id, clientOrder, true));
     }
 
     res.json({
@@ -679,6 +654,7 @@ router.post("/webhook", async (req, res) => {
       const clientOrder = toClient(existingOrder);
       scheduleCustomerOrderNotification(existingOrder.customer_uid, existingOrder._id, "payment_confirmed");
       notifyAndRecord(existingOrder._id, sendPaymentConfirmedNotification(clientOrder));
+      safeWaitUntil(sendAdminOrderNotificationsOnce(existingOrder._id, clientOrder, true));
       return res.json({ status: "updated_to_paid", orderId: existingOrder._id });
     }
 
@@ -738,6 +714,12 @@ router.post("/webhook", async (req, res) => {
         } catch (createErr) {
           if (createErr.code === 11000) {
             // Already created concurrently by frontend verify-payment
+            const existingOrder = await Order.findOne({
+              $or: [{ transaction_id: payment.id }, { razorpay_payment_id: payment.id }],
+            });
+            if (existingOrder) {
+              safeWaitUntil(sendAdminOrderNotificationsOnce(existingOrder._id, toClient(existingOrder), true));
+            }
             return res.json({ status: "already_processed" });
           }
           throw createErr;
@@ -750,6 +732,23 @@ router.post("/webhook", async (req, res) => {
           notifyAndRecord(newOrder._id, sendOrderConfirmation(clientOrder));
         }
         notifyAndRecord(newOrder._id, sendPaymentConfirmedNotification(clientOrder));
+
+        // Admin Notifications: Telegram, In-App Notification, Socket.IO, FCM, WhatsApp
+        safeWaitUntil(sendAdminOrderNotificationsOnce(newOrder._id, clientOrder, true));
+
+        // Upsert customer profile
+        if (rzpOrder.notes?.phone) {
+          Customer.findOneAndUpdate(
+            { phone: rzpOrder.notes.phone.trim() },
+            {
+              name: (rzpOrder.notes.customerName || "Customer").trim(),
+              phone: rzpOrder.notes.phone.trim(),
+              address: (rzpOrder.notes.address || "").trim(),
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          ).catch((err) => console.error("[customer] Upsert error from webhook:", err.message));
+        }
+
         return res.json({ status: "order_created", orderId: newOrder._id });
       } catch (webhookErr) {
         console.error("[razorpay-webhook] Failed to auto-create order from webhook:", webhookErr.message);
