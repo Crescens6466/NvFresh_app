@@ -92,10 +92,23 @@ export async function sendAdminOrderTelegramOnce(orderId, order, allowRetry = tr
 
       try {
         await sendAdminOrderTelegram({
-          orderId: order.id,
-          amount: order.total,
-          customerName: order.customer_name,
-          phone: order.phone,
+          orderId: order?.id || order?._id?.toString() || claimedOrder._id.toString(),
+          customerName: order?.customer_name || claimedOrder.customer_name,
+          phone: order?.phone || claimedOrder.phone,
+          address: order?.address || claimedOrder.address,
+          items: order?.items || claimedOrder.items,
+          total: order?.total ?? claimedOrder.total,
+          amount: order?.total ?? claimedOrder.total,
+          advancePaid: order?.advance_paid ?? claimedOrder.advance_paid,
+          remainingAmount: order?.remaining_amount ?? claimedOrder.remaining_amount,
+          deliveryInstruction:
+            order?.delivery_instruction ||
+            order?.deliveryInstruction ||
+            order?.notes ||
+            claimedOrder?.delivery_instruction ||
+            claimedOrder?.deliveryInstruction ||
+            claimedOrder?.notes ||
+            "",
         });
         await Order.updateOne(
           { _id: orderId, "admin_telegram_notification.status": "sending" },
@@ -129,12 +142,7 @@ export async function sendAdminOrderNotificationsOnce(orderId, clientOrder, isRa
 
   // 1. Telegram notification (atomic status lock inside sendAdminOrderTelegramOnce prevents duplicates)
   safeWaitUntil(
-    sendAdminOrderTelegramOnce(orderId, {
-      id: clientOrder.id,
-      total: clientOrder.total,
-      customer_name: clientOrder.customer_name,
-      phone: clientOrder.phone,
-    })
+    sendAdminOrderTelegramOnce(orderId, clientOrder)
   );
 
   // 2. WhatsApp Admin Alert
