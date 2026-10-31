@@ -43,9 +43,6 @@ const orderSchema = new mongoose.Schema(
     razorpay_payment_id: {
       type: String,
       default: null,
-      sparse: true,
-      unique: true,
-      index: true,
     },
     razorpay_signature: { type: String, default: null },
     admin_sms_notification: {
@@ -100,6 +97,16 @@ const orderSchema = new mongoose.Schema(
     },
   },
   { timestamps: { createdAt: "created_at", updatedAt: false } }
+);
+
+// Enforce unique partial index on non-empty Razorpay Payment IDs.
+// Manual UPI orders with razorpay_payment_id null are not indexed.
+orderSchema.index(
+  { razorpay_payment_id: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { razorpay_payment_id: { $type: "string" } },
+  }
 );
 
 export default mongoose.model("Order", orderSchema);

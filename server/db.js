@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import Product from "./models/Product.js";
 import Admin from "./models/Admin.js";
 import Settings from "./models/Settings.js";
+import Order from "./models/Order.js";
 import { ensureDefaultDeliveryAreas } from "./utils/serviceAreas.js";
 
 // In a serverless runtime (Vercel), connectDB() is called on every
@@ -32,6 +33,17 @@ async function doConnect() {
 
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 8000 });
   console.log("Connected to MongoDB");
+
+  Order.init().catch((err) => {
+    if (err.code === 11000) {
+      console.warn(
+        "[db] Notice: Unique index on razorpay_payment_id cannot be built until existing duplicate records are reconciled:",
+        err.message
+      );
+    } else {
+      console.warn("[db] Index initialization notice:", err.message);
+    }
+  });
 
   await seedIfEmpty();
 }

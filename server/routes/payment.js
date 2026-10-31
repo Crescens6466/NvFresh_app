@@ -76,6 +76,77 @@ export function hashItemsSummary(summary) {
   return crypto.createHash("sha256").update(summary || "").digest("hex").slice(0, 32);
 }
 
+export async function findOrderByPaymentId(paymentId, razorpayOrderId = null) {
+  if (!paymentId) return null;
+
+  // 1. Exact canonical razorpay_payment_id match takes absolute priority
+  const canonical = await Order.findOne({
+    razorpay_payment_id: paymentId,
+  });
+  if (canonical) return canonical;
+
+  // 2. Fallback for genuine legacy records where razorpay_payment_id is absent, null or empty.
+  // Exclude any archived duplicates (which have a suffixed razorpay_payment_id or status Cancelled).
+  const legacyOrder = await Order.findOne({
+    transaction_id: paymentId,
+    $or: [
+      { razorpay_payment_id: null },
+      { razorpay_payment_id: { $exists: false } },
+      { razorpay_payment_id: "" },
+    ],
+    status: { $ne: "Cancelled" },
+  });
+  if (legacyOrder) return legacyOrder;
+
+  // 3. Fallback by razorpay_order_id if provided (for draft orders not yet stamped with payment ID)
+  if (razorpayOrderId) {
+    const orderMatch = await Order.findOne({
+      razorpay_order_id: razorpayOrderId,
+      $or: [
+        { razorpay_payment_id: null },
+        { razorpay_payment_id: { $exists: false } },
+        { razorpay_payment_id: "" },
+      ],
+      status: { $ne: "Cancelled" },
+    });
+    if (orderMatch) return orderMatch;
+  }
+
+  return null;
+}
+
+export const inFlightPaymentLocks = new Map();
+
+export async function withPaymentLock(paymentId, fn) {
+  if (!paymentId) return fn();
+  while (inFlightPaymentLocks.has(paymentId)) {
+    try {
+      await inFlightPaymentLocks.get(paymentId);
+    } catch {
+      // previous lock error handled by original caller
+    }
+  }
+
+  let resolveLock;
+  let rejectLock;
+  const lockPromise = new Promise((resolve, reject) => {
+    resolveLock = resolve;
+    rejectLock = reject;
+  });
+  inFlightPaymentLocks.set(paymentId, lockPromise);
+
+  try {
+    const result = await fn();
+    resolveLock(result);
+    return result;
+  } catch (err) {
+    rejectLock(err);
+    throw err;
+  } finally {
+    inFlightPaymentLocks.delete(paymentId);
+  }
+}
+
 export async function optionalCustomerAuth(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {
@@ -320,220 +391,213 @@ router.post("/verify-payment", optionalCustomerAuth, async (req, res, next) => {
       });
     }
 
-    // 2. Prevent duplicate processing (Idempotency)
-    const duplicate = await Order.findOne({
-      $or: [
-        { transaction_id: razorpay_payment_id },
-        { razorpay_payment_id: razorpay_payment_id },
-      ],
-    });
-    if (duplicate) {
-      if (!duplicate.razorpay_signature && razorpay_signature) {
-        duplicate.razorpay_signature = razorpay_signature;
-        await duplicate.save();
-      }
-      const clientOrder = toClient(duplicate);
-      safeWaitUntil(sendAdminOrderNotificationsOnce(duplicate._id, clientOrder, true));
-      return res.json({
-        verified: true,
-        success: true,
-        message: "Payment already verified",
-        order: clientOrder,
-      });
-    }
-
-    let expectedAmountPaise;
-    let computedItemsHash = "";
-
-    if (orderId) {
-      const existing = await Order.findById(orderId);
-      if (!existing) {
-        return res.status(404).json({ verified: false, error: "Order not found" });
-      }
-      if (existing.customer_uid && req.customer?.uid && existing.customer_uid !== req.customer.uid) {
-        return res.status(403).json({ verified: false, error: "Order does not belong to this customer" });
-      }
-      if (existing.advance_payment_status === "Paid") {
+    return await withPaymentLock(razorpay_payment_id, async () => {
+      // 2. Prevent duplicate processing (Idempotency)
+      const duplicate = await findOrderByPaymentId(razorpay_payment_id, razorpay_order_id);
+      if (duplicate) {
+        if (!duplicate.razorpay_signature && razorpay_signature) {
+          duplicate.razorpay_signature = razorpay_signature;
+          await duplicate.save();
+        }
+        const clientOrder = toClient(duplicate);
         return res.json({
           verified: true,
           success: true,
-          message: "Order already paid",
-          order: toClient(existing),
+          message: "Payment already verified",
+          order: clientOrder,
         });
       }
-      expectedAmountPaise = Math.round(existing.advance_paid * 100);
-      computedItemsHash = hashItemsSummary(createItemsSummary(existing.items));
-    } else if (orderData) {
-      const { customerName, phone, address, items, advancePercentage } = orderData;
-      if (!customerName || !phone || !address || !items || !advancePercentage) {
-        return res.status(400).json({ verified: false, error: "Missing required order data for verification" });
-      }
-      if (!(await isDeliveryAreaServiceableAsync(address))) {
-        return res.status(400).json({ verified: false, error: await getServiceableAreaErrorMessageAsync() });
-      }
-      if (!isValidAdvancePercentage(advancePercentage)) {
-        return res.status(400).json({ verified: false, error: "advancePercentage must be one of 25, 50, 75, 100" });
-      }
-      const { resolvedItems, total } = await computeOrderTotals(items);
-      const { advanceAmount } = computeAdvance(total, Number(advancePercentage));
-      expectedAmountPaise = Math.round(advanceAmount * 100);
-      computedItemsHash = hashItemsSummary(createItemsSummary(resolvedItems));
-    }
 
-    // 3. Verification with Razorpay API (Payment Status & Order Ownership)
-    const razorpay = getRazorpayInstance();
-    if (razorpay) {
-      try {
-        const payment = await ensurePaymentCaptured(razorpay, razorpay_payment_id, expectedAmountPaise);
-        if (payment.order_id && payment.order_id !== razorpay_order_id) {
-          return res.status(400).json({ verified: false, error: "Payment does not belong to the expected order" });
+      let expectedAmountPaise;
+      let computedItemsHash = "";
+
+      if (orderId) {
+        const existing = await Order.findById(orderId);
+        if (!existing) {
+          return res.status(404).json({ verified: false, error: "Order not found" });
         }
-        if (payment.currency && payment.currency.toUpperCase() !== "INR") {
-          return res.status(400).json({ verified: false, error: "Payment currency mismatch" });
+        if (existing.customer_uid && req.customer?.uid && existing.customer_uid !== req.customer.uid) {
+          return res.status(403).json({ verified: false, error: "Order does not belong to this customer" });
         }
-        if (payment.amount !== undefined && payment.amount !== expectedAmountPaise) {
-          return res.status(400).json({ verified: false, error: "Payment amount does not match expected order amount" });
-        }
-      } catch (rzpErr) {
-        console.warn("[razorpay] Payment capture/verification error:", rzpErr.message);
-        return res.status(400).json({ verified: false, error: rzpErr.message || "Payment could not be confirmed as captured" });
-      }
-
-      // 4. Verify Razorpay Order ownership and item integrity
-      try {
-        const rzpOrder = await razorpay.orders.fetch(razorpay_order_id);
-        if (rzpOrder) {
-          if (rzpOrder.notes?.customerUid && req.customer?.uid && rzpOrder.notes.customerUid !== "guest") {
-            if (rzpOrder.notes.customerUid !== req.customer.uid) {
-              return res.status(403).json({ verified: false, error: "Payment order does not belong to this customer" });
-            }
-          }
-          if (rzpOrder.amount && rzpOrder.amount !== expectedAmountPaise) {
-            return res.status(400).json({ verified: false, error: "Payment order amount mismatch" });
-          }
-          if (orderData?.advancePercentage && rzpOrder.notes?.advancePercentage) {
-            if (rzpOrder.notes.advancePercentage !== String(orderData.advancePercentage)) {
-              return res.status(400).json({ verified: false, error: "Advance percentage mismatch with payment order" });
-            }
-          }
-          if (rzpOrder.notes?.itemsHash && computedItemsHash) {
-            if (rzpOrder.notes.itemsHash !== computedItemsHash) {
-              return res.status(400).json({ verified: false, error: "Order items do not match payment order" });
-            }
-          }
-        }
-      } catch (orderFetchErr) {
-        if (orderFetchErr.statusCode === 404 || orderFetchErr.statusCode === 400) {
-          return res.status(400).json({ verified: false, error: "Invalid payment order ID" });
-        }
-        console.warn("[razorpay] Notice: Could not fetch order entity from Razorpay API:", orderFetchErr.message);
-      }
-    }
-
-    let clientOrder;
-
-    if (orderId) {
-      const existing = await Order.findById(orderId);
-      existing.advance_payment_status = "Paid";
-      existing.transaction_id = razorpay_payment_id;
-      existing.payment_reference = razorpay_order_id;
-      existing.payment_method = "razorpay";
-      existing.razorpay_order_id = razorpay_order_id;
-      existing.razorpay_payment_id = razorpay_payment_id;
-      existing.razorpay_signature = razorpay_signature;
-      await existing.save();
-
-      clientOrder = toClient(existing);
-      scheduleCustomerOrderNotification(existing.customer_uid, existing._id, "payment_confirmed");
-      notifyAndRecord(existing._id, sendPaymentConfirmedNotification(clientOrder));
-      safeWaitUntil(sendAdminOrderNotificationsOnce(existing._id, clientOrder, true));
-    } else {
-      const { customerName, phone, address, items, advancePercentage } = orderData;
-      const { resolvedItems, subtotal, deliveryCharge, total } = await computeOrderTotals(items);
-      const { advanceAmount, remainingAmount } = computeAdvance(total, Number(advancePercentage));
-      const customerUid = req.customer?.uid || `guest_${phone.trim().replace(/\D/g, "") || Date.now()}`;
-
-      let order;
-      try {
-        order = await Order.create({
-          customer_uid: customerUid,
-          customer_name: customerName.trim(),
-          phone: phone.trim(),
-          address: address.trim(),
-          items: resolvedItems.map((i) => ({
-            product_id: i.productId,
-            name: i.name,
-            weight: i.weight,
-            quantity: i.quantity,
-            price: i.price,
-          })),
-          subtotal,
-          delivery_charge: deliveryCharge,
-          total,
-          advance_paid: advanceAmount,
-          advance_percentage: Number(advancePercentage),
-          remaining_amount: remainingAmount,
-          transaction_id: razorpay_payment_id,
-          payment_reference: razorpay_order_id,
-          payment_method: "razorpay",
-          razorpay_order_id,
-          razorpay_payment_id,
-          razorpay_signature,
-          advance_payment_status: "Paid",
-          status: "Pending",
-        });
-      } catch (createErr) {
-        if (createErr.code === 11000) {
-          const existingOrder = await Order.findOne({
-            $or: [{ transaction_id: razorpay_payment_id }, { razorpay_payment_id }],
+        if (existing.advance_payment_status === "Paid") {
+          return res.json({
+            verified: true,
+            success: true,
+            message: "Order already paid",
+            order: toClient(existing),
           });
-          if (existingOrder) {
-            if (!existingOrder.razorpay_signature && razorpay_signature) {
-              existingOrder.razorpay_signature = razorpay_signature;
-              await existingOrder.save();
-            }
-            const existingClientOrder = toClient(existingOrder);
-            safeWaitUntil(sendAdminOrderNotificationsOnce(existingOrder._id, existingClientOrder, true));
-            return res.json({
-              verified: true,
-              success: true,
-              message: "Payment already verified",
-              order: existingClientOrder,
-            });
-          }
         }
-        throw createErr;
+        expectedAmountPaise = Math.round(existing.advance_paid * 100);
+        computedItemsHash = hashItemsSummary(createItemsSummary(existing.items));
+      } else if (orderData) {
+        const { customerName, phone, address, items, advancePercentage } = orderData;
+        if (!customerName || !phone || !address || !items || !advancePercentage) {
+          return res.status(400).json({ verified: false, error: "Missing required order data for verification" });
+        }
+        if (!(await isDeliveryAreaServiceableAsync(address))) {
+          return res.status(400).json({ verified: false, error: await getServiceableAreaErrorMessageAsync() });
+        }
+        if (!isValidAdvancePercentage(advancePercentage)) {
+          return res.status(400).json({ verified: false, error: "advancePercentage must be one of 25, 50, 75, 100" });
+        }
+        const { resolvedItems, total } = await computeOrderTotals(items);
+        const { advanceAmount } = computeAdvance(total, Number(advancePercentage));
+        expectedAmountPaise = Math.round(advanceAmount * 100);
+        computedItemsHash = hashItemsSummary(createItemsSummary(resolvedItems));
       }
 
-      // Upsert customer profile
-      await Customer.findOneAndUpdate(
-        { phone: phone.trim() },
-        { name: customerName.trim(), phone: phone.trim(), address: address.trim() },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+      // 3. Verification with Razorpay API (Payment Status & Order Ownership)
+      const razorpay = getRazorpayInstance();
+      if (razorpay) {
+        try {
+          const payment = await ensurePaymentCaptured(razorpay, razorpay_payment_id, expectedAmountPaise);
+          if (payment.order_id && payment.order_id !== razorpay_order_id) {
+            return res.status(400).json({ verified: false, error: "Payment does not belong to the expected order" });
+          }
+          if (payment.currency && payment.currency.toUpperCase() !== "INR") {
+            return res.status(400).json({ verified: false, error: "Payment currency mismatch" });
+          }
+          if (payment.amount !== undefined && payment.amount !== expectedAmountPaise) {
+            return res.status(400).json({ verified: false, error: "Payment amount does not match expected order amount" });
+          }
+        } catch (rzpErr) {
+          console.warn("[razorpay] Payment capture/verification error:", rzpErr.message);
+          return res.status(400).json({ verified: false, error: rzpErr.message || "Payment could not be confirmed as captured" });
+        }
 
-      clientOrder = toClient(order);
-
-      // Customer Notifications
-      if (customerUid) {
-        scheduleCustomerOrderNotification(customerUid, order._id, "order_placed");
-        scheduleCustomerOrderNotification(customerUid, order._id, "payment_confirmed");
+        // 4. Verify Razorpay Order ownership and item integrity
+        try {
+          const rzpOrder = await razorpay.orders.fetch(razorpay_order_id);
+          if (rzpOrder) {
+            if (rzpOrder.notes?.customerUid && req.customer?.uid && rzpOrder.notes.customerUid !== "guest") {
+              if (rzpOrder.notes.customerUid !== req.customer.uid) {
+                return res.status(403).json({ verified: false, error: "Payment order does not belong to this customer" });
+              }
+            }
+            if (rzpOrder.amount && rzpOrder.amount !== expectedAmountPaise) {
+              return res.status(400).json({ verified: false, error: "Payment order amount mismatch" });
+            }
+            if (orderData?.advancePercentage && rzpOrder.notes?.advancePercentage) {
+              if (rzpOrder.notes.advancePercentage !== String(orderData.advancePercentage)) {
+                return res.status(400).json({ verified: false, error: "Advance percentage mismatch with payment order" });
+              }
+            }
+            if (rzpOrder.notes?.itemsHash && computedItemsHash) {
+              if (rzpOrder.notes.itemsHash !== computedItemsHash) {
+                return res.status(400).json({ verified: false, error: "Order items do not match payment order" });
+              }
+            }
+          }
+        } catch (orderFetchErr) {
+          if (orderFetchErr.statusCode === 404 || orderFetchErr.statusCode === 400) {
+            return res.status(400).json({ verified: false, error: "Invalid payment order ID" });
+          }
+          console.warn("[razorpay] Notice: Could not fetch order entity from Razorpay API:", orderFetchErr.message);
+        }
       }
 
-      if (process.env.WHATSAPP_SEND_CUSTOMER_CONFIRMATION === "true") {
-        notifyAndRecord(order._id, sendOrderConfirmation(clientOrder));
+      let clientOrder;
+
+      if (orderId) {
+        const existing = await Order.findById(orderId);
+        existing.advance_payment_status = "Paid";
+        existing.transaction_id = razorpay_payment_id;
+        existing.payment_reference = razorpay_order_id;
+        existing.payment_method = "razorpay";
+        existing.razorpay_order_id = razorpay_order_id;
+        existing.razorpay_payment_id = razorpay_payment_id;
+        existing.razorpay_signature = razorpay_signature;
+        await existing.save();
+
+        clientOrder = toClient(existing);
+        scheduleCustomerOrderNotification(existing.customer_uid, existing._id, "payment_confirmed");
+        notifyAndRecord(existing._id, sendPaymentConfirmedNotification(clientOrder));
+        safeWaitUntil(sendAdminOrderNotificationsOnce(existing._id, clientOrder, true));
+      } else {
+        const { customerName, phone, address, items, advancePercentage } = orderData;
+        const { resolvedItems, subtotal, deliveryCharge, total } = await computeOrderTotals(items);
+        const { advanceAmount, remainingAmount } = computeAdvance(total, Number(advancePercentage));
+        const customerUid = req.customer?.uid || `guest_${phone.trim().replace(/\D/g, "") || Date.now()}`;
+
+        let order;
+        try {
+          order = await Order.create({
+            customer_uid: customerUid,
+            customer_name: customerName.trim(),
+            phone: phone.trim(),
+            address: address.trim(),
+            items: resolvedItems.map((i) => ({
+              product_id: i.productId,
+              name: i.name,
+              weight: i.weight,
+              quantity: i.quantity,
+              price: i.price,
+            })),
+            subtotal,
+            delivery_charge: deliveryCharge,
+            total,
+            advance_paid: advanceAmount,
+            advance_percentage: Number(advancePercentage),
+            remaining_amount: remainingAmount,
+            transaction_id: razorpay_payment_id,
+            payment_reference: razorpay_order_id,
+            payment_method: "razorpay",
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature,
+            advance_payment_status: "Paid",
+            status: "Pending",
+          });
+        } catch (createErr) {
+          if (createErr.code === 11000 || /E11000|duplicate key/i.test(createErr.message)) {
+            const existingOrder = await findOrderByPaymentId(razorpay_payment_id);
+            if (existingOrder) {
+              if (!existingOrder.razorpay_signature && razorpay_signature) {
+                existingOrder.razorpay_signature = razorpay_signature;
+                await existingOrder.save();
+              }
+              const existingClientOrder = toClient(existingOrder);
+              return res.json({
+                verified: true,
+                success: true,
+                message: "Payment already verified",
+                order: existingClientOrder,
+              });
+            }
+          }
+          throw createErr;
+        }
+
+        // Upsert customer profile
+        await Customer.findOneAndUpdate(
+          { phone: phone.trim() },
+          { name: customerName.trim(), phone: phone.trim(), address: address.trim() },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+
+        clientOrder = toClient(order);
+
+        // Customer Notifications
+        if (customerUid) {
+          scheduleCustomerOrderNotification(customerUid, order._id, "order_placed");
+          scheduleCustomerOrderNotification(customerUid, order._id, "payment_confirmed");
+        }
+
+        if (process.env.WHATSAPP_SEND_CUSTOMER_CONFIRMATION === "true") {
+          notifyAndRecord(order._id, sendOrderConfirmation(clientOrder));
+        }
+        notifyAndRecord(order._id, sendPaymentConfirmedNotification(clientOrder));
+
+        // Admin Notifications: Telegram, In-App Notification, Socket.IO, FCM, WhatsApp
+        safeWaitUntil(sendAdminOrderNotificationsOnce(order._id, clientOrder, true));
       }
-      notifyAndRecord(order._id, sendPaymentConfirmedNotification(clientOrder));
 
-      // Admin Notifications: Telegram, In-App Notification, Socket.IO, FCM, WhatsApp
-      safeWaitUntil(sendAdminOrderNotificationsOnce(order._id, clientOrder, true));
-    }
-
-    res.json({
-      verified: true,
-      success: true,
-      message: "Payment verified successfully",
-      order: clientOrder,
+      return res.json({
+        verified: true,
+        success: true,
+        message: "Payment verified successfully",
+        order: clientOrder,
+      });
     });
   } catch (err) {
     if (err instanceof OrderValidationError) {
@@ -631,130 +695,124 @@ router.post("/webhook", async (req, res) => {
       return res.status(400).json({ error: "Payment amount does not match Razorpay order amount" });
     }
 
-    // 5. Check if order already exists in database
-    const existingOrder = await Order.findOne({
-      $or: [
-        { transaction_id: payment.id },
-        { razorpay_payment_id: payment.id },
-        { razorpay_order_id: rzpOrderId },
-      ],
-    });
+    return await withPaymentLock(payment.id, async () => {
+      // 5. Check if order already exists in database
+      const existingOrder = await findOrderByPaymentId(payment.id, rzpOrderId);
 
-    if (existingOrder) {
-      if (existingOrder.advance_payment_status === "Paid") {
-        return res.json({ status: "already_processed", orderId: existingOrder._id });
+      if (existingOrder) {
+        if (existingOrder.advance_payment_status === "Paid") {
+          return res.json({ status: "already_processed", orderId: existingOrder._id });
+        }
+        existingOrder.advance_payment_status = "Paid";
+        existingOrder.transaction_id = payment.id;
+        existingOrder.razorpay_payment_id = payment.id;
+        existingOrder.razorpay_order_id = rzpOrderId;
+        existingOrder.payment_method = "razorpay";
+        await existingOrder.save();
+
+        const clientOrder = toClient(existingOrder);
+        scheduleCustomerOrderNotification(existingOrder.customer_uid, existingOrder._id, "payment_confirmed");
+        notifyAndRecord(existingOrder._id, sendPaymentConfirmedNotification(clientOrder));
+        safeWaitUntil(sendAdminOrderNotificationsOnce(existingOrder._id, clientOrder, true));
+        return res.json({ status: "updated_to_paid", orderId: existingOrder._id });
       }
-      existingOrder.advance_payment_status = "Paid";
-      existingOrder.transaction_id = payment.id;
-      existingOrder.razorpay_payment_id = payment.id;
-      existingOrder.razorpay_order_id = rzpOrderId;
-      existingOrder.payment_method = "razorpay";
-      await existingOrder.save();
 
-      const clientOrder = toClient(existingOrder);
-      scheduleCustomerOrderNotification(existingOrder.customer_uid, existingOrder._id, "payment_confirmed");
-      notifyAndRecord(existingOrder._id, sendPaymentConfirmedNotification(clientOrder));
-      safeWaitUntil(sendAdminOrderNotificationsOnce(existingOrder._id, clientOrder, true));
-      return res.json({ status: "updated_to_paid", orderId: existingOrder._id });
-    }
-
-    // 6. Dropped browser recovery: Reconstruct order if browser closed before verify-payment arrived
-    if (rzpOrder.notes?.customerUid && rzpOrder.notes?.itemsSummary) {
-      try {
-        const itemsRaw = parseItemsSummary(rzpOrder.notes.itemsSummary);
-        if (itemsRaw.length === 0) {
-          return res.status(400).json({ error: "Cannot reconstruct order without items" });
-        }
-
-        const advancePct = Number(rzpOrder.notes.advancePercentage) || 25;
-        const { resolvedItems, subtotal, deliveryCharge, total } = await computeOrderTotals(itemsRaw);
-        const { advanceAmount, remainingAmount } = computeAdvance(total, advancePct);
-
-        // Security check: Verify calculated advance matches the captured payment amount
-        if (Math.round(advanceAmount * 100) !== payment.amount) {
-          console.error("[razorpay-webhook] Price mismatch between calculated advance and captured payment");
-          return res.status(400).json({ error: "Amount mismatch during order reconstruction" });
-        }
-
-        // Security check: Verify items hash matches the order notes hash
-        const computedHash = hashItemsSummary(createItemsSummary(resolvedItems));
-        if (rzpOrder.notes.itemsHash && rzpOrder.notes.itemsHash !== computedHash) {
-          console.error("[razorpay-webhook] Items hash mismatch during order reconstruction");
-          return res.status(400).json({ error: "Items integrity check failed" });
-        }
-
-        let newOrder;
+      // 6. Dropped browser recovery: Reconstruct order if browser closed before verify-payment arrived
+      if (rzpOrder.notes?.customerUid && rzpOrder.notes?.itemsSummary) {
         try {
-          newOrder = await Order.create({
-            customer_uid: rzpOrder.notes.customerUid,
-            customer_name: (rzpOrder.notes.customerName || "Customer").trim(),
-            phone: (rzpOrder.notes.phone || "").trim(),
-            address: (rzpOrder.notes.address || "").trim(),
-            items: resolvedItems.map((i) => ({
-              product_id: i.productId,
-              name: i.name,
-              weight: i.weight,
-              quantity: i.quantity,
-              price: i.price,
-            })),
-            subtotal,
-            delivery_charge: deliveryCharge,
-            total,
-            advance_paid: advanceAmount,
-            advance_percentage: advancePct,
-            remaining_amount: remainingAmount,
-            transaction_id: payment.id,
-            payment_reference: rzpOrderId,
-            payment_method: "razorpay",
-            razorpay_order_id: rzpOrderId,
-            razorpay_payment_id: payment.id,
-            advance_payment_status: "Paid",
-            status: "Pending",
-          });
-        } catch (createErr) {
-          if (createErr.code === 11000) {
-            // Already created concurrently by frontend verify-payment
-            const existingOrder = await Order.findOne({
-              $or: [{ transaction_id: payment.id }, { razorpay_payment_id: payment.id }],
-            });
-            if (existingOrder) {
-              safeWaitUntil(sendAdminOrderNotificationsOnce(existingOrder._id, toClient(existingOrder), true));
-            }
-            return res.json({ status: "already_processed" });
+          const itemsRaw = parseItemsSummary(rzpOrder.notes.itemsSummary);
+          if (itemsRaw.length === 0) {
+            return res.status(400).json({ error: "Cannot reconstruct order without items" });
           }
-          throw createErr;
-        }
 
-        const clientOrder = toClient(newOrder);
-        scheduleCustomerOrderNotification(rzpOrder.notes.customerUid, newOrder._id, "order_placed");
-        scheduleCustomerOrderNotification(rzpOrder.notes.customerUid, newOrder._id, "payment_confirmed");
-        if (process.env.WHATSAPP_SEND_CUSTOMER_CONFIRMATION === "true") {
-          notifyAndRecord(newOrder._id, sendOrderConfirmation(clientOrder));
-        }
-        notifyAndRecord(newOrder._id, sendPaymentConfirmedNotification(clientOrder));
+          const advancePct = Number(rzpOrder.notes.advancePercentage) || 25;
+          const { resolvedItems, subtotal, deliveryCharge, total } = await computeOrderTotals(itemsRaw);
+          const { advanceAmount, remainingAmount } = computeAdvance(total, advancePct);
 
-        // Admin Notifications: Telegram, In-App Notification, Socket.IO, FCM, WhatsApp
-        safeWaitUntil(sendAdminOrderNotificationsOnce(newOrder._id, clientOrder, true));
+          // Security check: Verify calculated advance matches the captured payment amount
+          if (Math.round(advanceAmount * 100) !== payment.amount) {
+            console.error("[razorpay-webhook] Price mismatch between calculated advance and captured payment");
+            return res.status(400).json({ error: "Amount mismatch during order reconstruction" });
+          }
 
-        // Upsert customer profile
-        if (rzpOrder.notes?.phone) {
-          Customer.findOneAndUpdate(
-            { phone: rzpOrder.notes.phone.trim() },
-            {
-              name: (rzpOrder.notes.customerName || "Customer").trim(),
-              phone: rzpOrder.notes.phone.trim(),
+          // Security check: Verify items hash matches the order notes hash
+          const computedHash = hashItemsSummary(createItemsSummary(resolvedItems));
+          if (rzpOrder.notes.itemsHash && rzpOrder.notes.itemsHash !== computedHash) {
+            console.error("[razorpay-webhook] Items hash mismatch during order reconstruction");
+            return res.status(400).json({ error: "Items integrity check failed" });
+          }
+
+          let newOrder;
+          try {
+            newOrder = await Order.create({
+              customer_uid: rzpOrder.notes.customerUid,
+              customer_name: (rzpOrder.notes.customerName || "Customer").trim(),
+              phone: (rzpOrder.notes.phone || "").trim(),
               address: (rzpOrder.notes.address || "").trim(),
-            },
-            { upsert: true, new: true, setDefaultsOnInsert: true }
-          ).catch((err) => console.error("[customer] Upsert error from webhook:", err.message));
-        }
+              items: resolvedItems.map((i) => ({
+                product_id: i.productId,
+                name: i.name,
+                weight: i.weight,
+                quantity: i.quantity,
+                price: i.price,
+              })),
+              subtotal,
+              delivery_charge: deliveryCharge,
+              total,
+              advance_paid: advanceAmount,
+              advance_percentage: advancePct,
+              remaining_amount: remainingAmount,
+              transaction_id: payment.id,
+              payment_reference: rzpOrderId,
+              payment_method: "razorpay",
+              razorpay_order_id: rzpOrderId,
+              razorpay_payment_id: payment.id,
+              advance_payment_status: "Paid",
+              status: "Pending",
+            });
+          } catch (createErr) {
+            if (createErr.code === 11000 || /E11000|duplicate key/i.test(createErr.message)) {
+              // Already created concurrently by frontend verify-payment
+              const existingOrder = await findOrderByPaymentId(payment.id);
+              if (existingOrder) {
+                return res.json({ status: "already_processed", orderId: existingOrder._id });
+              }
+            }
+            throw createErr;
+          }
 
-        return res.json({ status: "order_created", orderId: newOrder._id });
-      } catch (webhookErr) {
-        console.error("[razorpay-webhook] Failed to auto-create order from webhook:", webhookErr.message);
-        return res.status(500).json({ error: "Failed to process webhook order" });
+          const clientOrder = toClient(newOrder);
+          scheduleCustomerOrderNotification(rzpOrder.notes.customerUid, newOrder._id, "order_placed");
+          scheduleCustomerOrderNotification(rzpOrder.notes.customerUid, newOrder._id, "payment_confirmed");
+          if (process.env.WHATSAPP_SEND_CUSTOMER_CONFIRMATION === "true") {
+            notifyAndRecord(newOrder._id, sendOrderConfirmation(clientOrder));
+          }
+          notifyAndRecord(newOrder._id, sendPaymentConfirmedNotification(clientOrder));
+
+          // Admin Notifications: Telegram, In-App Notification, Socket.IO, FCM, WhatsApp
+          safeWaitUntil(sendAdminOrderNotificationsOnce(newOrder._id, clientOrder, true));
+
+          // Upsert customer profile
+          if (rzpOrder.notes?.phone) {
+            Customer.findOneAndUpdate(
+              { phone: rzpOrder.notes.phone.trim() },
+              {
+                name: (rzpOrder.notes.customerName || "Customer").trim(),
+                phone: rzpOrder.notes.phone.trim(),
+                address: (rzpOrder.notes.address || "").trim(),
+              },
+              { upsert: true, new: true, setDefaultsOnInsert: true }
+            ).catch((err) => console.error("[customer] Upsert error from webhook:", err.message));
+          }
+
+          return res.json({ status: "order_created", orderId: newOrder._id });
+        } catch (webhookErr) {
+          console.error("[razorpay-webhook] Failed to auto-create order from webhook:", webhookErr.message);
+          return res.status(500).json({ error: "Failed to process webhook order" });
+        }
       }
-    }
+      return res.json({ status: "ok" });
+    });
   }
 
   res.json({ status: "ok" });

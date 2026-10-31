@@ -131,12 +131,20 @@ describe("2. Webhook Payment Validation (Anti-Spoofing & Replay Protection)", ()
 });
 
 describe("3. Database-Level Idempotency & Concurrency Safety", () => {
-  it("enforces unique sparse index on razorpay_payment_id in Order schema", () => {
+  it("enforces unique partial index on razorpay_payment_id in Order schema", () => {
     const schema = Order.schema;
     const paymentIdField = schema.paths.razorpay_payment_id;
     assert.ok(paymentIdField, "razorpay_payment_id must exist in Order schema");
-    assert.equal(paymentIdField.options.unique, true, "razorpay_payment_id must have unique: true");
-    assert.equal(paymentIdField.options.sparse, true, "razorpay_payment_id must have sparse: true");
+
+    const indexes = schema.indexes();
+    const rzpIndex = indexes.find((idx) => idx[0]?.razorpay_payment_id === 1);
+    assert.ok(rzpIndex, "Unique partial index on razorpay_payment_id must exist in Order schema");
+    assert.equal(rzpIndex[1]?.unique, true, "Index must have unique: true");
+    assert.deepEqual(
+      rzpIndex[1]?.partialFilterExpression,
+      { razorpay_payment_id: { $type: "string" } },
+      "Index must have partialFilterExpression for string type"
+    );
   });
 
   it("safely handles race condition between simultaneous frontend verification and webhook processing", async () => {

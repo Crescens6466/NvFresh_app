@@ -71,6 +71,34 @@ export function safeWaitUntil(task) {
 
 export async function sendAdminOrderTelegramOnce(orderId, order, allowRetry = true) {
   try {
+      const razorpayPaymentId =
+        order?.razorpay_payment_id ||
+        (order?.transaction_id && String(order.transaction_id).startsWith("pay_") ? order.transaction_id : null);
+
+      // Check if a Telegram notification has already been sent (or is being sent) for this Razorpay payment across any order
+      if (razorpayPaymentId) {
+        const alreadySentOrder = await Order.findOne({
+          $or: [
+            { razorpay_payment_id: razorpayPaymentId },
+            { transaction_id: razorpayPaymentId },
+          ],
+          "admin_telegram_notification.status": { $in: ["sent", "sending"] },
+        });
+        if (alreadySentOrder && String(alreadySentOrder._id) !== String(orderId)) {
+          console.info(`[admin-telegram] Notification already handled for payment ${razorpayPaymentId} by order ${alreadySentOrder._id}; skipping duplicate`);
+          await Order.updateOne(
+            { _id: orderId },
+            {
+              $set: {
+                "admin_telegram_notification.status": "sent",
+                "admin_telegram_notification.sent_at": alreadySentOrder.admin_telegram_notification?.sent_at || new Date(),
+              },
+            }
+          );
+          return;
+        }
+      }
+
       const statusQuery = allowRetry
         ? { $in: ["pending", "failed"] }
         : "pending";
@@ -150,10 +178,27 @@ export async function sendAdminOrderNotificationsOnce(orderId, clientOrder, isRa
     .then((settings) => notifyAndRecord(orderId, sendAdminOrderAlert(clientOrder, settings?.phone_number)))
     .catch((err) => console.error("[notify] Could not load Settings for admin alert:", err.message));
 
-  // 3. Admin in-app notification + Realtime Socket.IO (Idempotent: at most once per order)
+  // 3. Admin in-app notification + Realtime Socket.IO (Idempotent: at most once per order or payment)
   Promise.resolve()
     .then(async () => {
-      const existing = await Notification.findOne({ orderId, type: "new_order" });
+      const razorpayPaymentId =
+        clientOrder?.razorpay_payment_id ||
+        (clientOrder?.transaction_id && String(clientOrder.transaction_id).startsWith("pay_") ? clientOrder.transaction_id : null);
+
+      let orderIdsToCheck = [orderId];
+      if (razorpayPaymentId) {
+        const relatedOrders = await Order.find({
+          $or: [
+            { razorpay_payment_id: razorpayPaymentId },
+            { transaction_id: razorpayPaymentId },
+          ],
+        }).select("_id").lean();
+        if (relatedOrders.length > 0) {
+          orderIdsToCheck = relatedOrders.map((o) => o._id);
+        }
+      }
+
+      const existing = await Notification.findOne({ orderId: { $in: orderIdsToCheck }, type: "new_order" });
       if (!existing) {
         const admins = await Admin.find().select("_id").lean();
         if (admins.length > 0) {
