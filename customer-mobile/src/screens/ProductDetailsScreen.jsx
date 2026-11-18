@@ -7,6 +7,7 @@ import { api, resolveImageUrl } from "../api.js";
 import { useCart } from "../context/CartContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { priceForWeight } from "../utils.js";
+import { normalizeProductForMobile } from "../utils/categories.js";
 import { Skeleton } from "../components/Skeleton.jsx";
 import ScreenHeader from "../components/ScreenHeader.jsx";
 import Button from "../components/Button.jsx";
@@ -36,8 +37,9 @@ export default function ProductDetailsScreen({ route }) {
     api
       .getProduct(productId)
       .then((p) => {
-        setProduct(p);
-        setWeight(p?.weights?.[1] || p?.weights?.[0] || "1 kg");
+        const normalized = normalizeProductForMobile(p);
+        setProduct(normalized);
+        setWeight(normalized?.weights?.[1] || normalized?.weights?.[0] || "1 kg");
       })
       .catch((err) => {
         console.warn("[ProductDetailsScreen] Failed to load product:", err?.message || err);

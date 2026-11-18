@@ -8,15 +8,18 @@ import EmptyState from "../components/EmptyState.jsx";
 import Button from "../components/Button.jsx";
 import { colors, radius, shadow, spacing, typography } from "../theme.js";
 import { formatDeliveryLocationsLine } from "../utils/serviceAreas.js";
-
-const CATEGORIES = ["All", "Chicken", "Mutton", "Fish", "Seafood", "Country Chicken"];
+import {
+  MOBILE_CATEGORIES,
+  filterAndMergeMobileProducts,
+  normalizeMobileCategory,
+} from "../utils/categories.js";
 
 export default function HomeScreen({ route }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [category, setCategory] = useState(route.params?.category || "All");
+  const [category, setCategory] = useState(normalizeMobileCategory(route.params?.category) || "All");
   const [search, setSearch] = useState("");
   const [deliveryAreas, setDeliveryAreas] = useState([]);
 
@@ -30,16 +33,22 @@ export default function HomeScreen({ route }) {
   // Categories screen navigates here with a `category` param (mirrors the
   // web app's navigate(`/?category=X`)) — apply it whenever it changes.
   useEffect(() => {
-    if (route.params?.category) setCategory(route.params.category);
+    if (route.params?.category) {
+      setCategory(normalizeMobileCategory(route.params.category) || "All");
+    }
   }, [route.params?.category]);
 
   function loadProducts(showSkeleton = true) {
     if (showSkeleton) setLoading(true);
     setError(null);
+    // Seafood in Android merges both backend "Fish" and "Seafood" categories,
+    // so fetch without a single-category backend filter when Seafood is active.
+    const requestParams =
+      category === "Seafood" ? { search } : { category, search };
     api
-      .getProducts({ category, search })
+      .getProducts(requestParams)
       .then((data) => {
-        setProducts(Array.isArray(data) ? data : []);
+        setProducts(filterAndMergeMobileProducts(data, category));
         setError(null);
       })
       .catch((err) => {
@@ -79,7 +88,7 @@ export default function HomeScreen({ route }) {
           <Ionicons name="search" size={16} color={colors.textMuted} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search chicken, mutton, fish..."
+            placeholder="Search chicken, mutton, seafood..."
             placeholderTextColor={colors.textMuted}
             value={search}
             onChangeText={setSearch}
@@ -116,7 +125,7 @@ export default function HomeScreen({ route }) {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={{ gap: 8, paddingHorizontal: spacing.lg }}>
-        {CATEGORIES.map((c) => (
+        {MOBILE_CATEGORIES.map((c) => (
           <Text
             key={c}
             onPress={() => setCategory(c)}

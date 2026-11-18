@@ -14,11 +14,11 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { api } from "../api.js";
 import { navigate } from "../navigation/navigationRef.js";
 import { colors, radius, shadow, spacing, typography } from "../theme.js";
+import { normalizeMobileCategory } from "../utils/categories.js";
 
 const CATS = [
   { name: "Chicken", icon: "food-drumstick", color: "#EF5350" },
   { name: "Mutton", icon: "food-steak", color: "#C62828" },
-  { name: "Fish", icon: "fish", color: "#0277BD" },
   { name: "Seafood", icon: "shrimp", color: "#EF6C00" },
   { name: "Country Chicken", icon: "food-drumstick-outline", color: "#AD1457" },
 ];
@@ -45,11 +45,19 @@ export default function CategoriesScreen() {
       const products = await api.getProducts();
       if (Array.isArray(products)) {
         const c = {};
+        const seenIds = new Set();
         products.forEach((p) => {
+          const key = p && String(p.id || p._id || "");
+          if (key) {
+            if (seenIds.has(key)) return;
+            seenIds.add(key);
+          }
           // Count only products available for purchase (isAvailable !== false)
           if (p && p.isAvailable !== false && p.category) {
-            const cat = p.category === "Prawns" ? "Seafood" : p.category;
-            c[cat] = (c[cat] || 0) + 1;
+            const cat = normalizeMobileCategory(p.category);
+            if (cat) {
+              c[cat] = (c[cat] || 0) + 1;
+            }
           }
         });
         setCounts(c);

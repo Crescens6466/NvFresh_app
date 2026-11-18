@@ -1,7 +1,6 @@
-// PaymentScreen.jsx — Native Razorpay Standard Checkout & Manual UPI Checkout
+// PaymentScreen.jsx — Native Razorpay Standard Checkout
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -23,7 +22,6 @@ import { api, resolveImageUrl } from "../api.js";
 import {
   isDeliveryAreaServiceable,
   formatServiceableAreaMessage,
-  SERVICEABLE_AREA_ERROR_MESSAGE,
 } from "../utils/serviceAreas.js";
 import ScreenHeader from "../components/ScreenHeader.jsx";
 import Button from "../components/Button.jsx";
@@ -37,23 +35,18 @@ export default function PaymentScreen() {
   const { showToast } = useToast();
   const { profile, isLoggedIn, loading: authLoading, getIdToken } = useCustomerAuth();
 
-  // "razorpay" (Native Pay Online) as default; "qr" (Manual UPI QR) preserved for verification
-  const [paymentMethod, setPaymentMethod] = useState("razorpay");
-  const [settings, setSettings] = useState(null);
-  const [settingsLoading, setSettingsLoading] = useState(true);
-  const [qrLoadFailed, setQrLoadFailed] = useState(false);
   const [advancePercentage, setAdvancePercentage] = useState(25);
 
   // Authoritative quote recomputed by backend from database prices
   const [quote, setQuote] = useState(null);
   const [quoteLoading, setQuoteLoading] = useState(true);
   const [quoteError, setQuoteError] = useState("");
+  const [paymentError, setPaymentError] = useState("");
 
   const [form, setForm] = useState({
     name: profile?.name || "",
     phone: profile?.phone || "",
     address: "",
-    transactionId: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [deliveryAreas, setDeliveryAreas] = useState([]);
@@ -105,16 +98,7 @@ export default function PaymentScreen() {
     // Checkout requires a signed-in customer
     if (!authLoading && !isLoggedIn) {
       navigation.replace("Login", { from: { name: "Payment" } });
-      return;
     }
-    setSettingsLoading(true);
-    api.getSettings()
-      .then((s) => {
-        setSettings(s);
-        setQrLoadFailed(false);
-      })
-      .catch(() => {})
-      .finally(() => setSettingsLoading(false));
   }, [authLoading, isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetches the quote (totals + advance amount) whenever the advance % changes
@@ -185,6 +169,7 @@ export default function PaymentScreen() {
     }
 
     setSubmitting(true);
+    setPaymentError("");
     try {
       const token = await getIdToken();
       const createOrderPayload = {
@@ -235,6 +220,7 @@ export default function PaymentScreen() {
         .then(async (response) => {
           try {
             setSubmitting(true);
+            setPaymentError("");
             const verifyToken = await getIdToken();
             await api.verifyRazorpayPayment(
               {
@@ -257,7 +243,9 @@ export default function PaymentScreen() {
             navigation.replace("OrderSuccess");
           } catch (verifyErr) {
             console.error("[payment] Native verification failed:", verifyErr);
-            showToast(verifyErr.message || "Payment verification failed. Please contact support.", "error");
+            const msg = verifyErr.message || "Payment verification failed. Please contact support.";
+            setPaymentError(msg);
+            showToast(msg, "error");
             setSubmitting(false);
           }
         })
@@ -270,58 +258,22 @@ export default function PaymentScreen() {
             /cancelled|dismissed|closed/i.test(description);
 
           if (isDismissed) {
-            showToast("Payment window closed. You can retry anytime.", "info");
+            const msg = "Payment window closed. Tap below to retry your payment.";
+            setPaymentError(msg);
+            showToast(msg, "info");
           } else {
-            showToast(description ? `Payment failed: ${description}` : "Payment was not completed.", "error");
+            const msg = description
+              ? `Payment failed: ${description}`
+              : "Payment was not completed. Please try again.";
+            setPaymentError(msg);
+            showToast(msg, "error");
           }
         });
     } catch (err) {
       setSubmitting(false);
-      showToast(err.message || "Could not launch Razorpay checkout", "error");
-    }
-  }
-
-  // --- Manual UPI QR Submission (Preserved for Testing) ---
-  async function handleSubmitManualUpi() {
-    const trimmedName = (form.name || "").trim();
-    const trimmedPhone = (form.phone || "").trim();
-    const trimmedAddress = (form.address || "").trim();
-    const trimmedTxId = (form.transactionId || "").trim();
-
-    if (!trimmedName || !trimmedPhone || !trimmedAddress || !trimmedTxId) {
-      showToast("Please fill in all fields including the Transaction ID", "error");
-      return;
-    }
-    const activeNames = deliveryAreas.length > 0 ? deliveryAreas.map((a) => a.name) : undefined;
-    if (!isDeliveryAreaServiceable(trimmedAddress, activeNames)) {
-      showToast(formatServiceableAreaMessage(activeNames), "error");
-      return;
-    }
-    if (!quote) {
-      showToast("Please wait for the payment amount to load", "error");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const token = await getIdToken();
-      await api.placeOrder(
-        {
-          customerName: trimmedName,
-          phone: trimmedPhone,
-          address: trimmedAddress,
-          items: items.map((i) => ({ productId: i.productId, weight: i.weight, quantity: i.quantity })),
-          advancePercentage,
-          transactionId: trimmedTxId,
-          transactionReference: quote.transactionReference,
-        },
-        token
-      );
-      clearCart();
-      navigation.replace("OrderSuccess");
-    } catch (err) {
-      showToast(err.message || "Could not place order", "error");
-    } finally {
-      setSubmitting(false);
+      const msg = err.message || "Could not launch Razorpay checkout. Please try again.";
+      setPaymentError(msg);
+      showToast(msg, "error");
     }
   }
 
@@ -446,133 +398,37 @@ export default function PaymentScreen() {
             )}
           </View>
 
-          {/* Payment Method Selector Tabs */}
-          <View style={styles.paymentMethodTabs}>
-            <TouchableOpacity
-              style={[
-                styles.paymentMethodTab,
-                paymentMethod === "razorpay" && styles.paymentMethodTabActive,
-              ]}
-              onPress={() => setPaymentMethod("razorpay")}
-              activeOpacity={0.85}
-            >
-              <Ionicons
-                name="card"
-                size={16}
-                color={paymentMethod === "razorpay" ? colors.white : colors.text}
-              />
-              <Text
-                style={[
-                  styles.paymentMethodTabText,
-                  paymentMethod === "razorpay" && styles.paymentMethodTabTextActive,
-                ]}
-              >
-                Pay Online
-              </Text>
-            </TouchableOpacity>
+          {/* Razorpay Online Payment Summary */}
+          <View style={styles.onlinePaymentCard}>
+            <View style={styles.onlinePaymentBadge}>
+              <Ionicons name="shield-checkmark" size={18} color="#2E7D32" />
+              <Text style={styles.onlinePaymentBadgeText}>Pay Online via Razorpay</Text>
+            </View>
 
-            <TouchableOpacity
-              style={[
-                styles.paymentMethodTab,
-                paymentMethod === "qr" && styles.paymentMethodTabActive,
-              ]}
-              onPress={() => setPaymentMethod("qr")}
-              activeOpacity={0.85}
-            >
-              <Ionicons
-                name="qr-code"
-                size={16}
-                color={paymentMethod === "qr" ? colors.white : colors.text}
-              />
-              <Text
-                style={[
-                  styles.paymentMethodTabText,
-                  paymentMethod === "qr" && styles.paymentMethodTabTextActive,
-                ]}
-              >
-                UPI QR Code
-              </Text>
-            </TouchableOpacity>
+            <Text style={styles.onlinePaymentAmount}>
+              {quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`}
+            </Text>
+            <Text style={styles.onlinePaymentSub}>
+              {isFullyPaid
+                ? "Full Payment (100%)"
+                : `${advancePercentage}% Advance Payment`}
+            </Text>
+
+            <View style={styles.onlinePaymentMethodsRow}>
+              <View style={styles.paymentPill}>
+                <Ionicons name="flash-outline" size={12} color="#8A5A00" />
+                <Text style={styles.paymentPillText}>UPI / GPay / PhonePe</Text>
+              </View>
+              <View style={styles.paymentPill}>
+                <Ionicons name="card-outline" size={12} color="#1565C0" />
+                <Text style={styles.paymentPillText}>Cards & NetBanking</Text>
+              </View>
+            </View>
+
+            <Text style={styles.onlinePaymentSecurityNote}>
+              Secured by Razorpay 256-bit encryption. Tap below to complete your payment.
+            </Text>
           </View>
-
-          {/* Payment Details Section */}
-          {paymentMethod === "razorpay" ? (
-            <View style={styles.onlinePaymentCard}>
-              <View style={styles.onlinePaymentBadge}>
-                <Ionicons name="shield-checkmark" size={18} color="#2E7D32" />
-                <Text style={styles.onlinePaymentBadgeText}>Razorpay Standard Checkout</Text>
-              </View>
-
-              <Text style={styles.onlinePaymentAmount}>
-                {quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`}
-              </Text>
-              <Text style={styles.onlinePaymentSub}>
-                {isFullyPaid
-                  ? "Full Payment (100%)"
-                  : `${advancePercentage}% Advance Payment`}
-              </Text>
-
-              <View style={styles.onlinePaymentMethodsRow}>
-                <View style={styles.paymentPill}>
-                  <Ionicons name="flash-outline" size={12} color="#8A5A00" />
-                  <Text style={styles.paymentPillText}>UPI / GPay / PhonePe</Text>
-                </View>
-                <View style={styles.paymentPill}>
-                  <Ionicons name="card-outline" size={12} color="#1565C0" />
-                  <Text style={styles.paymentPillText}>Cards & NetBanking</Text>
-                </View>
-              </View>
-
-              <Text style={styles.onlinePaymentSecurityNote}>
-                Secured by 256-bit encryption. Tap below to launch payment modal.
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.qrCard}>
-              <View style={styles.qrAmountSection}>
-                <Text style={styles.qrAmountLabel}>Payment Amount</Text>
-                <Text style={styles.qrAmountValue}>
-                  {quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`}
-                </Text>
-              </View>
-
-              {settingsLoading ? (
-                <View style={[styles.qrBox, styles.qrBoxLoading]}>
-                  <ActivityIndicator size="small" color={colors.primary} style={{ marginBottom: 6 }} />
-                  <Text style={styles.qrLoadingText}>Loading QR...</Text>
-                </View>
-              ) : settings?.qr_image && !qrLoadFailed ? (
-                <>
-                  <View style={[styles.qrBox, styles.qrBoxImage]}>
-                    <Image
-                      source={{ uri: resolveImageUrl(settings.qr_image) }}
-                      alt="Payment QR Code"
-                      style={styles.qrImage}
-                      resizeMode="contain"
-                      onError={() => setQrLoadFailed(true)}
-                    />
-                  </View>
-                  <Text style={styles.qrInstruction}>
-                    Scan or screenshot this QR and pay using your preferred UPI app.
-                  </Text>
-                </>
-              ) : (
-                <View style={styles.qrFallback}>
-                  <Ionicons name="qr-code-outline" size={40} color={colors.textMuted} />
-                  <Text style={styles.qrFallbackText}>
-                    Payment QR is currently unavailable. Please contact support.
-                  </Text>
-                </View>
-              )}
-
-              {settings?.upi_id ? (
-                <Text style={styles.paymentUpi}>{settings.upi_id}</Text>
-              ) : null}
-              {settings?.phone_number ? (
-                <Text style={styles.paymentPhone}>Or pay to: {settings.phone_number}</Text>
-              ) : null}
-            </View>
-          )}
 
           {/* Delivery Details Form */}
           <View style={styles.formCard}>
@@ -631,41 +487,27 @@ export default function PaymentScreen() {
               </View>
             )}
 
-            {paymentMethod === "qr" && (
-              <>
-                <Text style={styles.label}>Transaction ID</Text>
-                <TextInput
-                  style={styles.input}
-                  value={form.transactionId}
-                  onChangeText={(v) => setField("transactionId", v)}
-                  placeholder="UPI reference / transaction ID"
-                  placeholderTextColor={colors.textMuted}
-                  onFocus={scrollToBottom}
-                />
-              </>
-            )}
+            {paymentError ? (
+              <View style={styles.paymentErrorBox}>
+                <Ionicons name="alert-circle-outline" size={16} color="#C62828" />
+                <Text style={styles.paymentErrorText}>{paymentError}</Text>
+              </View>
+            ) : null}
 
-            {paymentMethod === "razorpay" ? (
-              <Button
-                title={
-                  submitting
-                    ? "Processing..."
-                    : quoteLoading
-                    ? "Calculating..."
-                    : `Pay ₹${quote?.advanceAmount ?? 0} Online`
-                }
-                onPress={handleRazorpayCheckout}
-                disabled={submitting || quoteLoading}
-                style={{ marginTop: spacing.lg }}
-              />
-            ) : (
-              <Button
-                title={submitting ? "Placing Order..." : "Place Order"}
-                onPress={handleSubmitManualUpi}
-                disabled={submitting || quoteLoading}
-                style={{ marginTop: spacing.lg }}
-              />
-            )}
+            <Button
+              title={
+                submitting
+                  ? "Processing..."
+                  : quoteLoading
+                  ? "Calculating..."
+                  : paymentError
+                  ? `Retry Payment — ₹${quote?.advanceAmount ?? 0}`
+                  : `Pay ₹${quote?.advanceAmount ?? 0} Online`
+              }
+              onPress={handleRazorpayCheckout}
+              disabled={submitting || quoteLoading}
+              style={{ marginTop: spacing.lg }}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -834,37 +676,6 @@ const styles = StyleSheet.create({
   remainingNoteFull: {
     color: colors.success,
   },
-  paymentMethodTabs: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  paymentMethodTab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    ...shadow.sm,
-  },
-  paymentMethodTabActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  paymentMethodTabText: {
-    fontSize: 13,
-    fontFamily: typography.body.bold,
-    color: colors.text,
-  },
-  paymentMethodTabTextActive: {
-    color: colors.white,
-  },
   onlinePaymentCard: {
     backgroundColor: colors.card,
     borderRadius: radius.md,
@@ -930,114 +741,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: "center",
   },
-  qrCard: {
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    padding: 20,
-    marginBottom: spacing.xl,
-    alignItems: "center",
-    ...shadow.sm,
-  },
-  qrAmountSection: {
-    width: "100%",
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    borderStyle: "dashed",
-    alignItems: "center",
-  },
-  qrAmountLabel: {
-    fontSize: 12,
-    fontFamily: typography.body.bold,
-    color: colors.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  qrAmountValue: {
-    fontSize: 28,
-    fontFamily: typography.display.bold,
-    color: colors.primary,
-    lineHeight: 34,
-  },
-  qrBox: {
-    width: 210,
-    height: 210,
-    maxWidth: "100%",
-    marginBottom: 12,
-    backgroundColor: "#ffffff",
-    padding: 8,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    ...shadow.sm,
-  },
-  qrBoxLoading: {
-    backgroundColor: colors.bg,
-    borderStyle: "dashed",
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  qrBoxImage: {},
-  qrLoadingText: {
-    fontSize: 13,
-    color: colors.textMuted,
-    fontWeight: "600",
-  },
-  qrImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: radius.md - 6,
-  },
-  qrInstruction: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: 12,
-    lineHeight: 18,
-    textAlign: "center",
-    paddingHorizontal: 8,
-  },
-  qrFallback: {
-    backgroundColor: colors.bg,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderStyle: "dashed",
-    borderRadius: radius.md,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    width: "100%",
-    maxWidth: 280,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    marginBottom: 16,
-  },
-  qrFallbackText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.textMuted,
-    textAlign: "center",
-    lineHeight: 18,
-  },
-  paymentUpi: {
-    fontWeight: "800",
-    fontSize: 16,
-    fontFamily: typography.display.bold,
-    color: colors.text,
-    marginTop: 4,
-    textAlign: "center",
-  },
-  paymentPhone: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 4,
-    textAlign: "center",
-  },
   formCard: {
     backgroundColor: colors.card,
     borderRadius: radius.md,
@@ -1080,6 +783,24 @@ const styles = StyleSheet.create({
     height: 80,
     paddingTop: 12,
     textAlignVertical: "top",
+  },
+  paymentErrorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FDE7E7",
+    borderWidth: 1,
+    borderColor: "#F5C6CB",
+    borderRadius: radius.sm,
+    padding: 10,
+    marginTop: spacing.md,
+  },
+  paymentErrorText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: typography.body.semibold,
+    color: "#C62828",
+    lineHeight: 17,
   },
   orderSummaryCard: {
     backgroundColor: colors.card,

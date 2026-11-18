@@ -1,7 +1,8 @@
 // App.js — assembles the providers + navigator, mirroring customer/src/App.jsx's
 // shell (Header always on top, Routes/Stack below).
-import React from "react";
+import React, { useEffect } from "react";
 import { ActivityIndicator, Text, TextInput, View } from "react-native";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
@@ -24,6 +25,9 @@ import AppHeader from "./src/components/AppHeader.jsx";
 import AnnouncementBanner from "./src/components/AnnouncementBanner.jsx";
 import { colors } from "./src/theme.js";
 
+// Keep the native splash screen visible until custom fonts finish loading.
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 // Match the website's default body font everywhere a Text/TextInput doesn't
 // explicitly opt into the display face — mirrors index.css's `body { font-family: var(--font-body) }`.
 Text.defaultProps = Text.defaultProps || {};
@@ -32,7 +36,7 @@ TextInput.defaultProps = TextInput.defaultProps || {};
 TextInput.defaultProps.style = [{ fontFamily: "Inter_400Regular" }, TextInput.defaultProps.style];
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Baloo2_700Bold,
     Baloo2_800ExtraBold,
     Inter_400Regular,
@@ -42,7 +46,13 @@ export default function App() {
     Inter_800ExtraBold,
   });
 
-  if (!fontsLoaded) {
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg }}>
         <ActivityIndicator color={colors.primary} />

@@ -42,6 +42,19 @@
       "@react-native-google-signin/google-signin",
       "expo-font",
       "expo-notifications",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFF8F3",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#FFF8F3"
+          }
+        }
+      ],
       "expo-status-bar"
     ],
     "extra": {
