@@ -114,4 +114,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ accessToken }),
     }),
+  deleteCustomerAccount: (token) =>
+    request(`/customer-auth/account`, {
+      method: "DELETE",
+      body: JSON.stringify({ confirm: true }),
+      headers: authHeaders(token),
+    }),
 };

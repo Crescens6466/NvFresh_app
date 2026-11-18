@@ -77,6 +77,19 @@ export const api = {
       body: JSON.stringify({ items, advancePercentage }),
       headers: authHeaders(token),
     }),
+  getRazorpayConfig: () => request(`/payment-config`),
+  createRazorpayOrder: (payload, token) =>
+    request(`/create-order`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: authHeaders(token),
+    }),
+  verifyRazorpayPayment: (payload, token) =>
+    request(`/verify-payment`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: authHeaders(token),
+    }),
   getMyOrders: (token) => request(`/orders/mine`, { headers: authHeaders(token) }),
   cancelOrder: (id, reason, token) =>
     request(`/orders/${id}/cancel`, {
@@ -92,6 +105,12 @@ export const api = {
     request(`/customer-auth/msg91-exchange`, {
       method: "POST",
       body: JSON.stringify({ accessToken }),
+    }),
+  deleteCustomerAccount: (token) =>
+    request(`/customer-auth/account`, {
+      method: "DELETE",
+      body: JSON.stringify({ confirm: true }),
+      headers: authHeaders(token),
     }),
   getCustomerNotifications: (token) => request(`/customer-notifications`, { headers: authHeaders(token) }),
   getCustomerNotificationUnreadCount: (token) => request(`/customer-notifications/unread-count`, { headers: authHeaders(token) }),

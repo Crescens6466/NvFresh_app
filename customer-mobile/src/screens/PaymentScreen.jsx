@@ -1,4 +1,4 @@
-// PaymentScreen.jsx — ported from customer/src/pages/Payment.jsx.
+// PaymentScreen.jsx — Native Razorpay Standard Checkout & Manual UPI Checkout
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import RazorpayCheckout from "react-native-razorpay";
 import { useCart } from "../context/CartContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
@@ -30,28 +31,24 @@ import { colors, radius, shadow, spacing, typography } from "../theme.js";
 
 const ADVANCE_OPTIONS = [25, 50, 75, 100];
 
-// Toggle to temporarily disable visible payment options while waiting for
-// Razorpay / Cashfree merchant account approval. Set to false to restore.
-const ONLINE_PAYMENTS_DISABLED = true;
-
 export default function PaymentScreen() {
   const { items, clearCart } = useCart();
   const navigation = useNavigation();
   const { showToast } = useToast();
   const { profile, isLoggedIn, loading: authLoading, getIdToken } = useCustomerAuth();
 
+  // "razorpay" (Native Pay Online) as default; "qr" (Manual UPI QR) preserved for verification
+  const [paymentMethod, setPaymentMethod] = useState("razorpay");
   const [settings, setSettings] = useState(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [qrLoadFailed, setQrLoadFailed] = useState(false);
   const [advancePercentage, setAdvancePercentage] = useState(25);
-  // Every amount shown (total, advance, remaining) comes from quote —
-  // the backend recomputes totals from the database, never trusting a
-  // frontend-calculated number.
+
+  // Authoritative quote recomputed by backend from database prices
   const [quote, setQuote] = useState(null);
   const [quoteLoading, setQuoteLoading] = useState(true);
   const [quoteError, setQuoteError] = useState("");
-  // Pre-fill from a saved profile (faster checkout for returning customers) —
-  // still fully editable.
+
   const [form, setForm] = useState({
     name: profile?.name || "",
     phone: profile?.phone || "",
@@ -62,6 +59,17 @@ export default function PaymentScreen() {
   const [deliveryAreas, setDeliveryAreas] = useState([]);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollViewRef = useRef(null);
+
+  // Sync saved profile details when loaded
+  useEffect(() => {
+    if (profile) {
+      setForm((prev) => ({
+        ...prev,
+        name: prev.name || profile.name || "",
+        phone: prev.phone || profile.phone || "",
+      }));
+    }
+  }, [profile]);
 
   useEffect(() => {
     const showSub = Keyboard.addListener(
@@ -94,8 +102,7 @@ export default function PaymentScreen() {
       navigation.replace("Main", { screen: "Cart" });
       return;
     }
-    // Checkout requires a signed-in customer — bounce to login and come
-    // straight back here once they're done.
+    // Checkout requires a signed-in customer
     if (!authLoading && !isLoggedIn) {
       navigation.replace("Login", { from: { name: "Payment" } });
       return;
@@ -110,9 +117,7 @@ export default function PaymentScreen() {
       .finally(() => setSettingsLoading(false));
   }, [authLoading, isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-fetches the quote (totals + dynamic QR) whenever the advance % changes
-  // — this never creates or touches an order, so switching between
-  // 25/50/75/100% can't ever produce duplicate orders.
+  // Re-fetches the quote (totals + advance amount) whenever the advance % changes
   useEffect(() => {
     if (items.length === 0 || authLoading || !isLoggedIn) return;
     let cancelled = false;
@@ -152,17 +157,143 @@ export default function PaymentScreen() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  async function handleSubmit() {
-    if (ONLINE_PAYMENTS_DISABLED) {
-      showToast("We're working on secure online payments. Please check back soon.", "info");
+  // --- Native Razorpay Standard Checkout ---
+  async function handleRazorpayCheckout() {
+    if (submitting) return;
+
+    const trimmedName = (form.name || "").trim();
+    const trimmedPhone = (form.phone || "").trim();
+    const trimmedAddress = (form.address || "").trim();
+
+    if (!trimmedName || !trimmedPhone || !trimmedAddress) {
+      showToast("Please enter your name, phone number, and delivery address", "error");
       return;
     }
-    if (!form.name || !form.phone || !form.address || !form.transactionId) {
-      showToast("Please fill in all fields", "error");
+    if (trimmedPhone.length < 10) {
+      showToast("Please enter a valid 10-digit mobile number", "error");
+      return;
+    }
+
+    const activeNames = deliveryAreas.length > 0 ? deliveryAreas.map((a) => a.name) : undefined;
+    if (!isDeliveryAreaServiceable(trimmedAddress, activeNames)) {
+      showToast(formatServiceableAreaMessage(activeNames), "error");
+      return;
+    }
+    if (!quote || quoteLoading) {
+      showToast("Please wait for the payment amount to load", "error");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const token = await getIdToken();
+      const createOrderPayload = {
+        items: items.map((i) => ({ productId: i.productId, weight: i.weight, quantity: i.quantity })),
+        advancePercentage,
+        customerName: trimmedName,
+        phone: trimmedPhone,
+        address: trimmedAddress,
+        amount: Math.round(quote.advanceAmount * 100),
+      };
+
+      const razorpayOrder = await api.createRazorpayOrder(createOrderPayload, token);
+      const rzpOrderId = razorpayOrder?.order_id || razorpayOrder?.orderId;
+      if (!rzpOrderId) {
+        throw new Error("Could not initialize payment order.");
+      }
+
+      let rzpKey = razorpayOrder?.key_id || razorpayOrder?.keyId;
+      if (!rzpKey) {
+        const config = await api.getRazorpayConfig();
+        rzpKey = config?.key_id || config?.keyId;
+      }
+      if (!rzpKey) {
+        throw new Error("Payment gateway Key ID is not configured on the server.");
+      }
+
+      const options = {
+        key: rzpKey,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency || "INR",
+        name: "NvFresh",
+        description: advancePercentage === 100 ? "Full Payment (100%)" : `Advance Payment (${advancePercentage}%)`,
+        order_id: rzpOrderId,
+        prefill: {
+          name: trimmedName,
+          contact: trimmedPhone,
+          email: profile?.email || "",
+        },
+        notes: {
+          address: trimmedAddress,
+        },
+        theme: {
+          color: "#C62828",
+        },
+      };
+
+      RazorpayCheckout.open(options)
+        .then(async (response) => {
+          try {
+            setSubmitting(true);
+            const verifyToken = await getIdToken();
+            await api.verifyRazorpayPayment(
+              {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                orderData: {
+                  customerName: trimmedName,
+                  phone: trimmedPhone,
+                  address: trimmedAddress,
+                  items: items.map((i) => ({ productId: i.productId, weight: i.weight, quantity: i.quantity })),
+                  advancePercentage,
+                },
+              },
+              verifyToken
+            );
+
+            clearCart();
+            showToast("Payment verified! Order placed successfully.", "success");
+            navigation.replace("OrderSuccess");
+          } catch (verifyErr) {
+            console.error("[payment] Native verification failed:", verifyErr);
+            showToast(verifyErr.message || "Payment verification failed. Please contact support.", "error");
+            setSubmitting(false);
+          }
+        })
+        .catch((error) => {
+          setSubmitting(false);
+          const description = error?.description || error?.reason || error?.message || "";
+          const isDismissed =
+            error?.code === 0 ||
+            error?.code === 2 ||
+            /cancelled|dismissed|closed/i.test(description);
+
+          if (isDismissed) {
+            showToast("Payment window closed. You can retry anytime.", "info");
+          } else {
+            showToast(description ? `Payment failed: ${description}` : "Payment was not completed.", "error");
+          }
+        });
+    } catch (err) {
+      setSubmitting(false);
+      showToast(err.message || "Could not launch Razorpay checkout", "error");
+    }
+  }
+
+  // --- Manual UPI QR Submission (Preserved for Testing) ---
+  async function handleSubmitManualUpi() {
+    const trimmedName = (form.name || "").trim();
+    const trimmedPhone = (form.phone || "").trim();
+    const trimmedAddress = (form.address || "").trim();
+    const trimmedTxId = (form.transactionId || "").trim();
+
+    if (!trimmedName || !trimmedPhone || !trimmedAddress || !trimmedTxId) {
+      showToast("Please fill in all fields including the Transaction ID", "error");
       return;
     }
     const activeNames = deliveryAreas.length > 0 ? deliveryAreas.map((a) => a.name) : undefined;
-    if (!isDeliveryAreaServiceable(form.address, activeNames)) {
+    if (!isDeliveryAreaServiceable(trimmedAddress, activeNames)) {
       showToast(formatServiceableAreaMessage(activeNames), "error");
       return;
     }
@@ -175,12 +306,12 @@ export default function PaymentScreen() {
       const token = await getIdToken();
       await api.placeOrder(
         {
-          customerName: form.name,
-          phone: form.phone,
-          address: form.address,
+          customerName: trimmedName,
+          phone: trimmedPhone,
+          address: trimmedAddress,
           items: items.map((i) => ({ productId: i.productId, weight: i.weight, quantity: i.quantity })),
           advancePercentage,
-          transactionId: form.transactionId,
+          transactionId: trimmedTxId,
           transactionReference: quote.transactionReference,
         },
         token
@@ -222,250 +353,321 @@ export default function PaymentScreen() {
             { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 40 },
           ]}
         >
-        <View style={styles.notice}>
-          <Text style={styles.noticeText}>
-            Pay a minimum of 25% advance to confirm your order — or pay more now, less on delivery.
-          </Text>
-        </View>
-
-        <View style={styles.banner}>
-          <Ionicons name="car-outline" size={16} color="#8A5A00" />
-          <Text style={styles.bannerText}>
-            Orders confirmed Saturday, delivered fresh Sunday morning.
-          </Text>
-        </View>
-
-        <View style={styles.orderSummaryCard}>
-          <View style={styles.orderSummaryHeader}>
-            <Text style={styles.orderSummaryTitle}>Items in Order ({items.length})</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("Main", { screen: "Cart" })}>
-              <Text style={styles.orderSummaryEdit}>Edit Cart</Text>
-            </TouchableOpacity>
-          </View>
-          {items.map((item) => (
-            <View key={item.key} style={styles.orderItemRow}>
-              <Image source={{ uri: resolveImageUrl(item.image) }} style={styles.orderItemThumb} />
-              <View style={styles.orderItemInfo}>
-                <Text style={styles.orderItemName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.orderItemMeta}>{item.weight} × {item.quantity}</Text>
-              </View>
-              <Text style={styles.orderItemPrice}>₹{item.price * item.quantity}</Text>
-            </View>
-          ))}
-        </View>
-
-        {quoteError ? (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorText}>{quoteError}</Text>
-            <TouchableOpacity
-              style={styles.errorButton}
-              onPress={() => navigation.navigate("Main", { screen: "Cart" })}
-            >
-              <Text style={styles.errorButtonText}>Return to Cart</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
-
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Order Total</Text>
-            <Text style={styles.rowValue}>{quoteLoading && !quote ? "…" : `₹${quote?.total ?? 0}`}</Text>
-          </View>
-
-          <View style={styles.advanceSelect}>
-            <Text style={styles.advanceLabel}>Choose Advance Payment</Text>
-            <View style={styles.advanceChips}>
-              {ADVANCE_OPTIONS.map((pct) => {
-                const isActive = advancePercentage === pct;
-                return (
-                  <TouchableOpacity
-                    key={pct}
-                    style={[styles.advanceChip, isActive && styles.advanceChipActive]}
-                    onPress={() => setAdvancePercentage(pct)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.advanceChipText, isActive && styles.advanceChipTextActive]}>
-                      {pct}%
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          <View style={[styles.row, styles.rowHighlight]}>
-            <Text style={styles.rowHighlightLabel}>Advance Amount ({advancePercentage}%)</Text>
-            <Text style={styles.rowHighlightValue}>{quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Remaining Amount</Text>
-            <Text style={styles.rowValue}>{quoteLoading ? "…" : `₹${quote?.remainingAmount ?? 0}`}</Text>
-          </View>
-
-          {!quoteLoading && quote && (
-            <View style={styles.remainingNoteContainer}>
-              <Text style={[styles.remainingNote, isFullyPaid && styles.remainingNoteFull]}>
-                {isFullyPaid
-                  ? "Fully paid — Nothing due on delivery"
-                  : `₹${quote.remainingAmount} remaining — Pay on delivery`}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Payment Section: Temporarily replaced with "Online Payments Coming Soon" while preserving original payment UI */}
-        {ONLINE_PAYMENTS_DISABLED ? (
-          <View style={styles.comingSoonCard}>
-            <View style={styles.comingSoonIconWrap}>
-              <Ionicons name="card-outline" size={32} color={colors.primary} />
-            </View>
-            <Text style={styles.comingSoonTitle}>Online Payments Coming Soon</Text>
-            <Text style={styles.comingSoonMessage}>
-              We're working on secure online payments. Please check back soon.
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.qrCard}>
-          <View style={styles.qrAmountSection}>
-            <Text style={styles.qrAmountLabel}>Payment Amount</Text>
-            <Text style={styles.qrAmountValue}>
-              {quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`}
+          <View style={styles.notice}>
+            <Text style={styles.noticeText}>
+              Pay a minimum of 25% advance to confirm your order — or pay more now, less on delivery.
             </Text>
           </View>
 
-          {settingsLoading ? (
-            <View style={[styles.qrBox, styles.qrBoxLoading]}>
-              <ActivityIndicator size="small" color={colors.primary} style={{ marginBottom: 6 }} />
-              <Text style={styles.qrLoadingText}>Loading QR...</Text>
+          <View style={styles.banner}>
+            <Ionicons name="car-outline" size={16} color="#8A5A00" />
+            <Text style={styles.bannerText}>
+              Orders confirmed Saturday, delivered fresh Sunday morning.
+            </Text>
+          </View>
+
+          {/* Items in order */}
+          <View style={styles.orderSummaryCard}>
+            <View style={styles.orderSummaryHeader}>
+              <Text style={styles.orderSummaryTitle}>Items in Order ({items.length})</Text>
+              <TouchableOpacity onPress={() => navigation.navigate("Main", { screen: "Cart" })}>
+                <Text style={styles.orderSummaryEdit}>Edit Cart</Text>
+              </TouchableOpacity>
             </View>
-          ) : settings?.qr_image && !qrLoadFailed ? (
-            <>
-              <View style={[styles.qrBox, styles.qrBoxImage]}>
-                <Image
-                  source={{ uri: resolveImageUrl(settings.qr_image) }}
-                  alt="Payment QR Code"
-                  style={styles.qrImage}
-                  resizeMode="contain"
-                  onError={() => setQrLoadFailed(true)}
-                />
+            {items.map((item) => (
+              <View key={item.key} style={styles.orderItemRow}>
+                <Image source={{ uri: resolveImageUrl(item.image) }} style={styles.orderItemThumb} />
+                <View style={styles.orderItemInfo}>
+                  <Text style={styles.orderItemName} numberOfLines={1}>{item.name}</Text>
+                  <Text style={styles.orderItemMeta}>{item.weight} × {item.quantity}</Text>
+                </View>
+                <Text style={styles.orderItemPrice}>₹{item.price * item.quantity}</Text>
               </View>
-              <Text style={styles.qrInstruction}>
-                Screenshot this QR and make the payment using your preferred UPI app.
-              </Text>
-            </>
-          ) : (
-            <View style={styles.qrFallback}>
-              <Ionicons name="qr-code-outline" size={40} color={colors.textMuted} />
-              <Text style={styles.qrFallbackText}>
-                Payment QR is currently unavailable. Please contact support.
-              </Text>
-            </View>
-          )}
+            ))}
+          </View>
 
-          {settings?.upi_id ? (
-            <Text style={styles.paymentUpi}>{settings.upi_id}</Text>
-          ) : null}
-          {settings?.phone_number ? (
-            <Text style={styles.paymentPhone}>Or pay to: {settings.phone_number}</Text>
-          ) : null}
-        </View>
-
-        )}
-
-        <View style={styles.formCard}>
-          <Text style={styles.formTitle}>Delivery Details</Text>
-
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            style={styles.input}
-            value={form.name}
-            onChangeText={(v) => setField("name", v)}
-            placeholder="Your name"
-            placeholderTextColor={colors.textMuted}
-          />
-
-          <Text style={styles.label}>Phone Number</Text>
-          <TextInput
-            style={styles.input}
-            value={form.phone}
-            onChangeText={(v) => setField("phone", v)}
-            placeholder="10-digit mobile number"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="phone-pad"
-            onFocus={scrollToBottom}
-          />
-
-          <Text style={styles.label}>Delivery Address</Text>
-          <Text style={styles.serviceAreaNote}>
-            Delivering only to Tadepalli, Kunchanapalli, Undavalli, and Nulakapeta
-          </Text>
-          <TextInput
-            style={[styles.input, styles.textarea]}
-            value={form.address}
-            onChangeText={(v) => setField("address", v)}
-            placeholder="House no, street, area (Tadepalli, Kunchanapalli, Undavalli, Nulakapeta)"
-            placeholderTextColor={colors.textMuted}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-            scrollEnabled={false}
-            returnKeyType="default"
-            onFocus={scrollToBottom}
-          />
-
-          {isAddressServiceable === true && (
-            <View style={styles.serviceableTagSuccess}>
-              <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
-              <Text style={styles.serviceableTagSuccessText}>Serviceable delivery area detected</Text>
-            </View>
-          )}
-          {isAddressServiceable === false && (
-            <View style={styles.serviceableTagWarning}>
-              <Ionicons name="alert-circle-outline" size={14} color="#C62828" />
-              <Text style={styles.serviceableTagWarningText}>
-                Please include Tadepalli, Kunchanapalli, Undavalli, or Nulakapeta
-              </Text>
-            </View>
-          )}
-
-          {!ONLINE_PAYMENTS_DISABLED && (
-            <>
-              <Text style={styles.label}>Transaction ID</Text>
-              <TextInput
-                style={styles.input}
-                value={form.transactionId}
-                onChangeText={(v) => setField("transactionId", v)}
-                placeholder="UPI reference / transaction ID"
-                placeholderTextColor={colors.textMuted}
-                onFocus={scrollToBottom}
-              />
-            </>
-          )}
-
-          {ONLINE_PAYMENTS_DISABLED ? (
-            <>
-              <Button
-                title="Online Payments Coming Soon"
-                disabled={true}
-                style={{ marginTop: spacing.md }}
-              />
-              <Button
-                title="Return to Cart"
-                variant="outline"
+          {quoteError ? (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>{quoteError}</Text>
+              <TouchableOpacity
+                style={styles.errorButton}
                 onPress={() => navigation.navigate("Main", { screen: "Cart" })}
-                style={{ marginTop: spacing.sm }}
+              >
+                <Text style={styles.errorButtonText}>Return to Cart</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {/* Pricing & Advance Selector */}
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Order Total</Text>
+              <Text style={styles.rowValue}>{quoteLoading && !quote ? "…" : `₹${quote?.total ?? 0}`}</Text>
+            </View>
+
+            <View style={styles.advanceSelect}>
+              <Text style={styles.advanceLabel}>Choose Advance Payment</Text>
+              <View style={styles.advanceChips}>
+                {ADVANCE_OPTIONS.map((pct) => {
+                  const isActive = advancePercentage === pct;
+                  return (
+                    <TouchableOpacity
+                      key={pct}
+                      style={[styles.advanceChip, isActive && styles.advanceChipActive]}
+                      onPress={() => setAdvancePercentage(pct)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.advanceChipText, isActive && styles.advanceChipTextActive]}>
+                        {pct}%
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={[styles.row, styles.rowHighlight]}>
+              <Text style={styles.rowHighlightLabel}>Advance Amount ({advancePercentage}%)</Text>
+              <Text style={styles.rowHighlightValue}>{quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Remaining Amount</Text>
+              <Text style={styles.rowValue}>{quoteLoading ? "…" : `₹${quote?.remainingAmount ?? 0}`}</Text>
+            </View>
+
+            {!quoteLoading && quote && (
+              <View style={styles.remainingNoteContainer}>
+                <Text style={[styles.remainingNote, isFullyPaid && styles.remainingNoteFull]}>
+                  {isFullyPaid
+                    ? "Fully paid — Nothing due on delivery"
+                    : `₹${quote.remainingAmount} remaining — Pay on delivery`}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Payment Method Selector Tabs */}
+          <View style={styles.paymentMethodTabs}>
+            <TouchableOpacity
+              style={[
+                styles.paymentMethodTab,
+                paymentMethod === "razorpay" && styles.paymentMethodTabActive,
+              ]}
+              onPress={() => setPaymentMethod("razorpay")}
+              activeOpacity={0.85}
+            >
+              <Ionicons
+                name="card"
+                size={16}
+                color={paymentMethod === "razorpay" ? colors.white : colors.text}
               />
-            </>
+              <Text
+                style={[
+                  styles.paymentMethodTabText,
+                  paymentMethod === "razorpay" && styles.paymentMethodTabTextActive,
+                ]}
+              >
+                Pay Online
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.paymentMethodTab,
+                paymentMethod === "qr" && styles.paymentMethodTabActive,
+              ]}
+              onPress={() => setPaymentMethod("qr")}
+              activeOpacity={0.85}
+            >
+              <Ionicons
+                name="qr-code"
+                size={16}
+                color={paymentMethod === "qr" ? colors.white : colors.text}
+              />
+              <Text
+                style={[
+                  styles.paymentMethodTabText,
+                  paymentMethod === "qr" && styles.paymentMethodTabTextActive,
+                ]}
+              >
+                UPI QR Code
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Payment Details Section */}
+          {paymentMethod === "razorpay" ? (
+            <View style={styles.onlinePaymentCard}>
+              <View style={styles.onlinePaymentBadge}>
+                <Ionicons name="shield-checkmark" size={18} color="#2E7D32" />
+                <Text style={styles.onlinePaymentBadgeText}>Razorpay Standard Checkout</Text>
+              </View>
+
+              <Text style={styles.onlinePaymentAmount}>
+                {quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`}
+              </Text>
+              <Text style={styles.onlinePaymentSub}>
+                {isFullyPaid
+                  ? "Full Payment (100%)"
+                  : `${advancePercentage}% Advance Payment`}
+              </Text>
+
+              <View style={styles.onlinePaymentMethodsRow}>
+                <View style={styles.paymentPill}>
+                  <Ionicons name="flash-outline" size={12} color="#8A5A00" />
+                  <Text style={styles.paymentPillText}>UPI / GPay / PhonePe</Text>
+                </View>
+                <View style={styles.paymentPill}>
+                  <Ionicons name="card-outline" size={12} color="#1565C0" />
+                  <Text style={styles.paymentPillText}>Cards & NetBanking</Text>
+                </View>
+              </View>
+
+              <Text style={styles.onlinePaymentSecurityNote}>
+                Secured by 256-bit encryption. Tap below to launch payment modal.
+              </Text>
+            </View>
           ) : (
-            <Button
-              title={submitting ? "Placing Order..." : "Place Order"}
-              onPress={handleSubmit}
-              disabled={submitting || quoteLoading}
-              style={{ marginTop: spacing.md }}
-            />
+            <View style={styles.qrCard}>
+              <View style={styles.qrAmountSection}>
+                <Text style={styles.qrAmountLabel}>Payment Amount</Text>
+                <Text style={styles.qrAmountValue}>
+                  {quoteLoading ? "…" : `₹${quote?.advanceAmount ?? 0}`}
+                </Text>
+              </View>
+
+              {settingsLoading ? (
+                <View style={[styles.qrBox, styles.qrBoxLoading]}>
+                  <ActivityIndicator size="small" color={colors.primary} style={{ marginBottom: 6 }} />
+                  <Text style={styles.qrLoadingText}>Loading QR...</Text>
+                </View>
+              ) : settings?.qr_image && !qrLoadFailed ? (
+                <>
+                  <View style={[styles.qrBox, styles.qrBoxImage]}>
+                    <Image
+                      source={{ uri: resolveImageUrl(settings.qr_image) }}
+                      alt="Payment QR Code"
+                      style={styles.qrImage}
+                      resizeMode="contain"
+                      onError={() => setQrLoadFailed(true)}
+                    />
+                  </View>
+                  <Text style={styles.qrInstruction}>
+                    Scan or screenshot this QR and pay using your preferred UPI app.
+                  </Text>
+                </>
+              ) : (
+                <View style={styles.qrFallback}>
+                  <Ionicons name="qr-code-outline" size={40} color={colors.textMuted} />
+                  <Text style={styles.qrFallbackText}>
+                    Payment QR is currently unavailable. Please contact support.
+                  </Text>
+                </View>
+              )}
+
+              {settings?.upi_id ? (
+                <Text style={styles.paymentUpi}>{settings.upi_id}</Text>
+              ) : null}
+              {settings?.phone_number ? (
+                <Text style={styles.paymentPhone}>Or pay to: {settings.phone_number}</Text>
+              ) : null}
+            </View>
           )}
-        </View>
-      </ScrollView>
+
+          {/* Delivery Details Form */}
+          <View style={styles.formCard}>
+            <Text style={styles.formTitle}>Delivery Details</Text>
+
+            <Text style={styles.label}>Full Name</Text>
+            <TextInput
+              style={styles.input}
+              value={form.name}
+              onChangeText={(v) => setField("name", v)}
+              placeholder="Your name"
+              placeholderTextColor={colors.textMuted}
+            />
+
+            <Text style={styles.label}>Phone Number</Text>
+            <TextInput
+              style={styles.input}
+              value={form.phone}
+              onChangeText={(v) => setField("phone", v)}
+              placeholder="10-digit mobile number"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="phone-pad"
+              onFocus={scrollToBottom}
+            />
+
+            <Text style={styles.label}>Delivery Address</Text>
+            <Text style={styles.serviceAreaNote}>
+              Delivering only to Tadepalli, Kunchanapalli, Undavalli, and Nulakapeta
+            </Text>
+            <TextInput
+              style={[styles.input, styles.textarea]}
+              value={form.address}
+              onChangeText={(v) => setField("address", v)}
+              placeholder="House no, street, area (Tadepalli, Kunchanapalli, Undavalli, Nulakapeta)"
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              scrollEnabled={false}
+              returnKeyType="default"
+              onFocus={scrollToBottom}
+            />
+
+            {isAddressServiceable === true && (
+              <View style={styles.serviceableTagSuccess}>
+                <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
+                <Text style={styles.serviceableTagSuccessText}>Serviceable delivery area detected</Text>
+              </View>
+            )}
+            {isAddressServiceable === false && (
+              <View style={styles.serviceableTagWarning}>
+                <Ionicons name="alert-circle-outline" size={14} color="#C62828" />
+                <Text style={styles.serviceableTagWarningText}>
+                  Please include Tadepalli, Kunchanapalli, Undavalli, or Nulakapeta
+                </Text>
+              </View>
+            )}
+
+            {paymentMethod === "qr" && (
+              <>
+                <Text style={styles.label}>Transaction ID</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form.transactionId}
+                  onChangeText={(v) => setField("transactionId", v)}
+                  placeholder="UPI reference / transaction ID"
+                  placeholderTextColor={colors.textMuted}
+                  onFocus={scrollToBottom}
+                />
+              </>
+            )}
+
+            {paymentMethod === "razorpay" ? (
+              <Button
+                title={
+                  submitting
+                    ? "Processing..."
+                    : quoteLoading
+                    ? "Calculating..."
+                    : `Pay ₹${quote?.advanceAmount ?? 0} Online`
+                }
+                onPress={handleRazorpayCheckout}
+                disabled={submitting || quoteLoading}
+                style={{ marginTop: spacing.lg }}
+              />
+            ) : (
+              <Button
+                title={submitting ? "Placing Order..." : "Place Order"}
+                onPress={handleSubmitManualUpi}
+                disabled={submitting || quoteLoading}
+                style={{ marginTop: spacing.lg }}
+              />
+            )}
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
@@ -632,6 +834,102 @@ const styles = StyleSheet.create({
   remainingNoteFull: {
     color: colors.success,
   },
+  paymentMethodTabs: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  paymentMethodTab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    ...shadow.sm,
+  },
+  paymentMethodTabActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  paymentMethodTabText: {
+    fontSize: 13,
+    fontFamily: typography.body.bold,
+    color: colors.text,
+  },
+  paymentMethodTabTextActive: {
+    color: colors.white,
+  },
+  onlinePaymentCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: 20,
+    marginBottom: spacing.xl,
+    alignItems: "center",
+    ...shadow.sm,
+  },
+  onlinePaymentBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#E8F5E9",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    marginBottom: 12,
+  },
+  onlinePaymentBadgeText: {
+    fontSize: 12,
+    fontFamily: typography.body.bold,
+    color: "#2E7D32",
+  },
+  onlinePaymentAmount: {
+    fontSize: 32,
+    fontFamily: typography.display.bold,
+    color: colors.primary,
+    lineHeight: 38,
+  },
+  onlinePaymentSub: {
+    fontSize: 13,
+    fontFamily: typography.body.medium,
+    color: colors.textMuted,
+    marginTop: 2,
+    marginBottom: 12,
+  },
+  onlinePaymentMethodsRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
+  paymentPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  paymentPillText: {
+    fontSize: 11,
+    fontFamily: typography.body.semibold,
+    color: colors.text,
+  },
+  onlinePaymentSecurityNote: {
+    fontSize: 11,
+    fontFamily: typography.body.medium,
+    color: colors.textMuted,
+    textAlign: "center",
+  },
   qrCard: {
     backgroundColor: colors.card,
     borderRadius: radius.md,
@@ -782,39 +1080,6 @@ const styles = StyleSheet.create({
     height: 80,
     paddingTop: 12,
     textAlignVertical: "top",
-  },
-  comingSoonCard: {
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    padding: 24,
-    marginBottom: spacing.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    ...shadow.sm,
-  },
-  comingSoonIconWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#FEE2E2",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  comingSoonTitle: {
-    fontSize: 18,
-    fontFamily: typography.display.bold,
-    color: colors.text,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  comingSoonMessage: {
-    fontSize: 13,
-    fontFamily: typography.body.medium,
-    color: colors.textMuted,
-    textAlign: "center",
-    lineHeight: 19,
-    maxWidth: 280,
   },
   orderSummaryCard: {
     backgroundColor: colors.card,

@@ -35,16 +35,6 @@ export default function Terms() {
       </section>
 
       <section>
-        <h4>Cancellations & Refunds</h4>
-        <p>
-          Orders can be cancelled until Saturday at 11:59 PM. Cancellations are
-          not allowed from Sunday 12:00 AM onwards through Sunday 11:59 PM.
-          Eligible cancellations made before the cutoff will receive a refund of
-          the advance payment, subject to the applicable refund process.
-        </p>
-      </section>
-
-      <section>
         <h4>Product Quality</h4>
         <p>
           NvFresh is committed to delivering fresh, hygienic, and quality meat products to our customers.

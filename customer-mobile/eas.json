@@ -10,7 +10,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://nv-fresh-app-x1mc.vercel.app/api",
+        "EXPO_PUBLIC_API_URL": "https://staging-nv-fresh-app.vercel.app/api",
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCbpY8Pl4To2Jc1xaECOJBUtuD3p2cjLMk",
         "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "nvfresh-da6d8.firebaseapp.com",
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "nvfresh-da6d8",
@@ -27,7 +27,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://nv-fresh-app-x1mc.vercel.app/api",
+        "EXPO_PUBLIC_API_URL": "https://staging-nv-fresh-app.vercel.app/api",
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCbpY8Pl4To2Jc1xaECOJBUtuD3p2cjLMk",
         "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "nvfresh-da6d8.firebaseapp.com",
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "nvfresh-da6d8",
@@ -39,7 +39,7 @@
         "EXPO_PUBLIC_MSG91_WIDGET_ID": "36696568466c393032313039",
         "EXPO_PUBLIC_MSG91_TOKEN_AUTH": "565521T4ixpmndRpa6a98f99eP1"
       }
-    }, 
+    },
     "production": {
       "android": {
         "buildType": "app-bundle"

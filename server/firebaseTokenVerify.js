@@ -68,5 +68,6 @@ export async function verifyFirebaseIdToken(idToken) {
     phone: payload.phone_number || null,
     email: payload.email || null,
     name: payload.name || null,
+    tokenIssuedAt: payload.iat ? new Date(payload.iat * 1000) : null,
   };
 }

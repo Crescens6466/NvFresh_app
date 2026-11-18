@@ -132,6 +132,32 @@ export function CustomerAuthProvider({ children }) {
     }
   }
 
+  async function deleteAccount() {
+    const token = phoneSession
+      ? phoneSession.token
+      : auth?.currentUser
+        ? await auth.currentUser.getIdToken(true)
+        : null;
+
+    if (!token) {
+      throw new Error("Please sign in again to verify your identity before deleting your account.");
+    }
+
+    const response = await api.deleteCustomerAccount(token);
+
+    // Clear local session credentials only after backend confirms deletion or pending status.
+    if (phoneSession) {
+      await AsyncStorage.removeItem(PHONE_SESSION_KEY).catch(() => {});
+      setPhoneSession(null);
+    }
+    if (auth && firebaseUser) {
+      await signOut(auth).catch(() => {});
+      await GoogleSignin.signOut().catch(() => {});
+    }
+
+    return response;
+  }
+
   async function getIdToken() {
     // Phone session takes precedence if both somehow exist — it's the more
     // recently established one in that edge case.
@@ -159,6 +185,7 @@ export function CustomerAuthProvider({ children }) {
         retryOtp,
         verifyOtp,
         logout,
+        deleteAccount,
         getIdToken,
       }}
     >

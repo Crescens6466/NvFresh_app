@@ -14,6 +14,11 @@ import PhoneOtp from "../models/PhoneOtp.js";
 import { bumpRateLimit } from "../models/OtpRateLimit.js";
 import { sendOtpSms } from "../utils/smsgate.js";
 import { verifyMsg91AccessToken } from "../utils/msg91.js";
+import { requireCustomerAuth } from "../middleware/customerAuth.js";
+import {
+  executeCustomerAccountDeletion,
+  AccountDeletionError,
+} from "../utils/accountDeletion.js";
 
 const router = express.Router();
 
@@ -171,5 +176,58 @@ router.post("/msg91-exchange", async (req, res, next) => {
     next(err);
   }
 });
+
+export function createAccountDeletionHandler(deps = {}) {
+  return async function handleDeleteCustomerAccount(req, res) {
+    try {
+      if (!req.customer?.uid) {
+        return res.status(401).json({ error: "Not signed in" });
+      }
+
+      const body = req.body && typeof req.body === "object" ? req.body : {};
+      if (body.confirm !== true) {
+        return res.status(400).json({
+          error: "Explicit confirmation (confirm: true) is required to permanently delete your account",
+        });
+      }
+
+      // Reject any attempt to specify another customer's identifier in the body.
+      if (body.uid && String(body.uid).trim() !== req.customer.uid) {
+        return res.status(403).json({ error: "You can only delete your own authenticated account" });
+      }
+      if (body.phone) {
+        const bodyDigits = normalizeDigits(body.phone);
+        const customerDigits = normalizeDigits(req.customer.phone);
+        if (!customerDigits || bodyDigits !== customerDigits) {
+          return res.status(403).json({ error: "You can only delete your own authenticated account" });
+        }
+      }
+
+      const result = await executeCustomerAccountDeletion({
+        customer: req.customer,
+        deps,
+      });
+
+      const { httpStatus, ...payload } = result;
+      return res.status(httpStatus).json(payload);
+    } catch (err) {
+      if (err instanceof AccountDeletionError) {
+        return res.status(err.statusCode).json({ ok: false, error: err.message });
+      }
+      console.error("[customerAuth] Account deletion error:", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Could not complete account deletion right now. Please try again or contact support@nvfresh.in.",
+      });
+    }
+  };
+}
+
+const deleteCustomerAccountHandler = createAccountDeletionHandler();
+
+// DELETE /api/customer-auth/account (and POST /api/customer-auth/delete-account)
+// Permanently deletes the currently authenticated customer's account.
+router.delete("/account", requireCustomerAuth, deleteCustomerAccountHandler);
+router.post("/delete-account", requireCustomerAuth, deleteCustomerAccountHandler);
 
 export default router;

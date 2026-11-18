@@ -1,18 +1,17 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { getMessaging } from "firebase-admin/messaging";
 
 let messaging = null;
+let adminAuth = null;
 
-export function getAdminMessaging() {
-  if (messaging) return messaging;
-
+function getAdminApp() {
   const { FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, FIREBASE_ADMIN_PRIVATE_KEY } = process.env;
   if (!FIREBASE_ADMIN_PROJECT_ID || !FIREBASE_ADMIN_CLIENT_EMAIL || !FIREBASE_ADMIN_PRIVATE_KEY) {
-    console.warn("[admin-notifications] Firebase Admin is not configured");
     return null;
   }
 
-  const app =
+  return (
     getApps()[0] ||
     initializeApp({
       credential: cert({
@@ -20,9 +19,34 @@ export function getAdminMessaging() {
         clientEmail: FIREBASE_ADMIN_CLIENT_EMAIL,
         privateKey: FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, "\n"),
       }),
-    });
+    })
+  );
+}
+
+export function getAdminMessaging() {
+  if (messaging) return messaging;
+
+  const app = getAdminApp();
+  if (!app) {
+    console.warn("[admin-notifications] Firebase Admin is not configured");
+    return null;
+  }
+
   messaging = getMessaging(app);
   return messaging;
+}
+
+export function getAdminAuth() {
+  if (adminAuth) return adminAuth;
+
+  const app = getAdminApp();
+  if (!app) {
+    console.warn("[firebase-admin] Firebase Admin Auth is not configured");
+    return null;
+  }
+
+  adminAuth = getAuth(app);
+  return adminAuth;
 }
 
 export async function sendAdminNewOrderNotification(order) {

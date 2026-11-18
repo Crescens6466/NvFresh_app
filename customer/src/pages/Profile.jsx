@@ -7,6 +7,7 @@ import {
   HiOutlinePhone,
   HiOutlineShieldCheck,
   HiOutlineDocumentText,
+  HiOutlineTrash,
   HiOutlineArrowRightOnRectangle,
   HiChevronRight,
 } from "react-icons/hi2";
@@ -19,6 +20,7 @@ const LINKS = [
   { to: "/contact", label: "Contact Us", Icon: HiOutlinePhone },
   { to: "/privacy", label: "Privacy Policy", Icon: HiOutlineShieldCheck },
   { to: "/terms", label: "Terms & Conditions", Icon: HiOutlineDocumentText },
+  { to: "/delete-account", label: "Delete Account", Icon: HiOutlineTrash },
 ];
 
 export default function Profile() {

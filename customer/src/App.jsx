@@ -15,6 +15,7 @@ import About from "./pages/About.jsx";
 import Contact from "./pages/Contact.jsx";
 import Privacy from "./pages/Privacy.jsx";
 import Terms from "./pages/Terms.jsx";
+import DeleteAccount from "./pages/DeleteAccount.jsx";
 import OrderSuccess from "./pages/OrderSuccess.jsx";
 import CustomerNotifications from "./pages/CustomerNotifications.jsx";
 import CustomerNotificationPrompt from "./components/CustomerNotificationPrompt.jsx";
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/delete-account" element={<DeleteAccount />} />
         </Routes>
       </main>
       <BottomNav />

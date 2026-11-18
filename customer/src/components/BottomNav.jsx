@@ -47,6 +47,8 @@ function isDestinationActive(destination, pathname) {
         norm.startsWith("/privacy/") ||
         norm === "/terms" ||
         norm.startsWith("/terms/") ||
+        norm === "/delete-account" ||
+        norm.startsWith("/delete-account/") ||
         norm === "/login" ||
         norm.startsWith("/login/")
       );

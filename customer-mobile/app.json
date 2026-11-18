@@ -3,7 +3,7 @@
     "name": "NvFresh",
     "slug": "nvfresh",
     "scheme": "nvfresh",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -12,6 +12,7 @@
     },
     "android": {
       "package": "com.nvfresh.customer",
+      "versionCode": 2,
       "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json",
       "permissions": [
