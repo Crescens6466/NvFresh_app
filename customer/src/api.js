@@ -60,6 +60,7 @@ export const api = {
       body: JSON.stringify({ items, advancePercentage }),
       headers: authHeaders(token),
     }),
+  getRazorpayConfig: () => request(`/payment-config`),
   createRazorpayOrder: (payload, token) =>
     request(`/create-order`, {
       method: "POST",

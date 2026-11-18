@@ -14,6 +14,8 @@ export default function OrderHistory() {
   const { isLoggedIn, loading: authLoading, getIdToken } = useCustomerAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
   const [cancellingId, setCancellingId] = useState(null);
 
   useEffect(() => {
@@ -22,11 +24,27 @@ export default function OrderHistory() {
       navigate("/login", { state: { from: "/orders" } });
       return;
     }
+    let active = true;
+    setLoading(true);
+    setError("");
     getIdToken()
       .then((token) => api.getMyOrders(token))
-      .then(setOrders)
-      .finally(() => setLoading(false));
-  }, [authLoading, isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
+      .then((data) => {
+        if (!active) return;
+        setOrders(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setOrders([]);
+        setError(err?.message || "Could not load your orders right now.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [authLoading, isLoggedIn, retryCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCancelOrder(orderId) {
     if (isSundayInIndia()) {
@@ -73,6 +91,20 @@ export default function OrderHistory() {
 
       {loading ? (
         <div className="skeleton" style={{ height: 120, marginBottom: 12 }} />
+      ) : error ? (
+        <div className="empty-state">
+          <HiOutlineClipboardDocumentList />
+          <h3>Could not load orders</h3>
+          <p>{error}</p>
+          <button
+            type="button"
+            className="btn btn-outline"
+            style={{ marginTop: 12 }}
+            onClick={() => setRetryCount((c) => c + 1)}
+          >
+            Retry
+          </button>
+        </div>
       ) : orders.length === 0 ? (
         <div className="empty-state">
           <HiOutlineClipboardDocumentList />

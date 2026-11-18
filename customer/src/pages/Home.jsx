@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { HiOutlineTruck, HiOutlineShieldCheck, HiOutlineSparkles, HiOutlineMapPin } from "react-icons/hi2";
+import { HiOutlineTruck, HiOutlineShieldCheck, HiOutlineSparkles, HiOutlineMapPin, HiOutlineExclamationCircle } from "react-icons/hi2";
 import { HiOutlineSearch } from "react-icons/hi";
 import { HiOutlineInboxStack } from "react-icons/hi2";
 import { api } from "../api.js";
@@ -15,6 +15,8 @@ export default function Home() {
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
   const [category, setCategory] = useState(searchParams.get("category") || "All");
   const [search, setSearch] = useState("");
   const [deliveryAreas, setDeliveryAreas] = useState([]);
@@ -27,16 +29,31 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    let active = true;
     setLoading(true);
+    setError("");
     const timer = setTimeout(() => {
       api
         .getProducts({ category, search })
-        .then(setProducts)
-        .catch(() => setProducts([]))
-        .finally(() => setLoading(false));
+        .then((data) => {
+          if (!active) return;
+          setProducts(Array.isArray(data) ? data : []);
+          setError("");
+        })
+        .catch((err) => {
+          if (!active) return;
+          setProducts([]);
+          setError(err?.message || "Could not load products right now.");
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
     }, 200);
-    return () => clearTimeout(timer);
-  }, [category, search]);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [category, search, retryCount]);
 
   return (
     <div>
@@ -100,11 +117,25 @@ export default function Home() {
       <section className="featured">
         <div className="featured-header">
           <h3>Featured Products</h3>
-          <span className="featured-count">{loading ? "" : `${products.length} items`}</span>
+          <span className="featured-count">{loading || error ? "" : `${products.length} items`}</span>
         </div>
 
         {loading ? (
           <ProductGridSkeleton count={6} />
+        ) : error ? (
+          <div className="empty-state">
+            <HiOutlineExclamationCircle />
+            <h3>Could not load products</h3>
+            <p>We&rsquo;re having trouble reaching our server. Please check your connection and try again.</p>
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ marginTop: 12 }}
+              onClick={() => setRetryCount((c) => c + 1)}
+            >
+              Retry
+            </button>
+          </div>
         ) : products.length === 0 ? (
           <div className="empty-state">
             <HiOutlineInboxStack />

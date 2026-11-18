@@ -15,10 +15,14 @@ const CATS = [
 export default function Categories() {
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
     let isMounted = true;
+    setLoading(true);
+    setError("");
     api
       .getProducts()
       .then((products) => {
@@ -32,10 +36,12 @@ export default function Categories() {
           });
         }
         setCounts(c);
+        setError("");
       })
-      .catch(() => {
+      .catch((err) => {
         if (!isMounted) return;
         setCounts({});
+        setError(err?.message || "Could not load categories right now.");
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -44,15 +50,29 @@ export default function Categories() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [retryCount]);
 
   return (
     <div className="categories page-fade">
       <h2 className="categories-title">Shop by Category</h2>
+      {error && (
+        <div className="empty-state" style={{ marginBottom: 16 }}>
+          <h3>Could not load categories</h3>
+          <p>We&rsquo;re having trouble reaching our server. Please try again.</p>
+          <button
+            type="button"
+            className="btn btn-outline"
+            style={{ marginTop: 12 }}
+            onClick={() => setRetryCount((c) => c + 1)}
+          >
+            Retry
+          </button>
+        </div>
+      )}
       <div className="categories-grid">
         {CATS.map(({ name, Icon, color }) => {
           const count = counts[name] || 0;
-          const isUnavailable = !loading && count === 0;
+          const isUnavailable = !loading && !error && count === 0;
 
           return (
             <button
@@ -69,6 +89,8 @@ export default function Categories() {
               <p className={`category-card-meta ${isUnavailable ? "is-unavailable" : ""}`}>
                 {loading
                   ? "…"
+                  : error
+                  ? "Tap to view"
                   : isUnavailable
                   ? "Currently unavailable"
                   : `${count} ${count === 1 ? "item" : "items"}`}

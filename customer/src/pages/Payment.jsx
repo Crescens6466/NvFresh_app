@@ -183,7 +183,11 @@ export default function Payment() {
         throw new Error("Could not initialize payment order.");
       }
 
-      const rzpKey = razorpayOrder?.key_id || razorpayOrder?.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID;
+      let rzpKey = razorpayOrder?.key_id || razorpayOrder?.keyId;
+      if (!rzpKey) {
+        const config = await api.getRazorpayConfig().catch(() => null);
+        rzpKey = config?.key_id || config?.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID;
+      }
       if (!rzpKey) {
         throw new Error("Razorpay Key ID is not configured on the server.");
       }

@@ -8,6 +8,7 @@ import { api } from "../api.js";
 import { Skeleton } from "../components/Skeleton.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import ScreenHeader from "../components/ScreenHeader.jsx";
+import Button from "../components/Button.jsx";
 import {
   isSundayInIndia,
   SUNDAY_CANCELLATION_ERROR_MESSAGE,
@@ -28,6 +29,8 @@ export default function OrderHistoryScreen() {
   const { isLoggedIn, loading: authLoading, getIdToken } = useCustomerAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
   const [cancellingId, setCancellingId] = useState(null);
 
   useEffect(() => {
@@ -36,11 +39,27 @@ export default function OrderHistoryScreen() {
       navigation.replace("Login", { from: { name: "OrderHistory" } });
       return;
     }
+    let active = true;
+    setLoading(true);
+    setError("");
     getIdToken()
       .then((token) => api.getMyOrders(token))
-      .then(setOrders)
-      .finally(() => setLoading(false));
-  }, [authLoading, isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
+      .then((data) => {
+        if (!active) return;
+        setOrders(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setOrders([]);
+        setError(err?.message || "Could not load your orders right now.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [authLoading, isLoggedIn, retryCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCancelOrder = (orderId) => {
     if (isSundayInIndia()) {
@@ -91,6 +110,19 @@ export default function OrderHistoryScreen() {
       <ScreenHeader title="My Orders" />
       {loading ? (
         <Skeleton style={{ height: 120, marginHorizontal: spacing.lg }} />
+      ) : error ? (
+        <EmptyState
+          icon={<Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />}
+          title="Could not load orders"
+          message={error}
+        >
+          <Button
+            title="Retry"
+            variant="outline"
+            onPress={() => setRetryCount((c) => c + 1)}
+            style={{ marginTop: spacing.md, minWidth: 140 }}
+          />
+        </EmptyState>
       ) : orders.length === 0 ? (
         <EmptyState
           icon={<Ionicons name="clipboard-outline" size={40} color={colors.textMuted} />}
