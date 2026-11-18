@@ -21,7 +21,7 @@ const accountDeletionRecordSchema = new mongoose.Schema(
     orders_anonymized_count: { type: Number, default: 0 },
     active_orders_preserved_count: { type: Number, default: 0 },
     last_error: { type: String, default: "" },
-    deletion_count: { type: Number, default: 1 },
+    deletion_count: { type: Number },
   },
   { versionKey: false }
 );

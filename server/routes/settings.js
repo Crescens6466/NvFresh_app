@@ -12,7 +12,7 @@ export const DEFAULT_SETTINGS = {
   upi_id: "nvfresh@upi",
   qr_image: null,
   delivery_charge: 0,
-  support_email: "support@nvfresh.in",
+  support_email: "nvfreshsupport@gmail.com",
   business_address: "NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India",
   support_hours: "Everyday, 7:00 AM – 9:00 PM",
   delivery_schedule: "Orders confirmed Saturday, delivered fresh every Sunday morning",

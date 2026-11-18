@@ -7,7 +7,7 @@ const settingsSchema = new mongoose.Schema({
   upi_id: { type: String, default: "nvfresh@upi" },
   qr_image: { type: String, default: null },
   delivery_charge: { type: Number, default: 0 },
-  support_email: { type: String, default: "support@nvfresh.in" },
+  support_email: { type: String, default: "nvfreshsupport@gmail.com" },
   business_address: {
     type: String,
     default: "NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India",

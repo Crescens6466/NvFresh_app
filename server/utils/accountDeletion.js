@@ -110,6 +110,7 @@ export async function executeCustomerAccountDeletion({
 
     // 2. Record deletion attempt in_progress before mutating personal data.
     const now = new Date();
+    const nextDeletionCount = Number(existingRecord?.deletion_count || 0) + 1;
     const record = await models.AccountDeletionRecord.findOneAndUpdate(
       { uid },
       {
@@ -118,11 +119,10 @@ export async function executeCustomerAccountDeletion({
           status: "in_progress",
           requested_at: now,
           last_error: "",
+          deletion_count: nextDeletionCount,
         },
-        $inc: { deletion_count: existingRecord ? 1 : 0 },
         $setOnInsert: {
           uid,
-          deletion_count: 1,
         },
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
@@ -227,7 +227,7 @@ export async function executeCustomerAccountDeletion({
       ).catch(() => {});
 
       throw new AccountDeletionError(
-        "Could not complete account deletion right now. Your account was not finalized as deleted — please try again or contact support@nvfresh.in.",
+        "Could not complete account deletion right now. Your account was not finalized as deleted — please try again or contact nvfreshsupport@gmail.com.",
         500
       );
     }
@@ -305,7 +305,7 @@ export async function executeCustomerAccountDeletion({
         status: "pending",
         alreadyDeleted: false,
         message:
-          "Your NvFresh profile, device tokens, and notifications have been removed. Final removal of your Google/Firebase sign-in credentials is pending completion — you may retry shortly or contact support@nvfresh.in.",
+          "Your NvFresh profile, device tokens, and notifications have been removed. Final removal of your Google/Firebase sign-in credentials is pending completion — you may retry shortly or contact nvfreshsupport@gmail.com.",
         summary,
       };
     }

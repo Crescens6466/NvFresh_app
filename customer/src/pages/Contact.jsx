@@ -13,7 +13,7 @@ import { api } from "../api.js";
 import "./StaticPage.css";
 
 const DEFAULT_PHONE = "+91 98765 43210";
-const DEFAULT_EMAIL = "support@nvfresh.in";
+const DEFAULT_EMAIL = "nvfreshsupport@gmail.com";
 const DEFAULT_ADDRESS = "NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India";
 const DEFAULT_SUPPORT_HOURS = "Everyday, 7:00 AM – 9:00 PM";
 const DEFAULT_DELIVERY_SCHEDULE = "Orders confirmed Saturday, delivered fresh every Sunday morning";

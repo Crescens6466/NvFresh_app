@@ -117,6 +117,23 @@ function createInMemoryDeps({
         return state.deletionRecords.find((r) => r.uid === query.uid) || null;
       },
       async findOneAndUpdate(query, update, options = {}) {
+        // Mirror MongoDB server validation: reject conflicting paths across update operators.
+        const opSets = [
+          Object.keys(update.$set || {}),
+          Object.keys(update.$inc || {}),
+          Object.keys(update.$setOnInsert || {}),
+        ];
+        const seen = new Set();
+        for (const keys of opSets) {
+          for (const k of keys) {
+            if (seen.has(k)) {
+              const err = new Error(`Updating the path '${k}' would create a conflict at '${k}'`);
+              err.code = 40;
+              throw err;
+            }
+            seen.add(k);
+          }
+        }
         let rec = state.deletionRecords.find((r) => r.uid === query.uid);
         if (!rec && options.upsert) {
           rec = { uid: query.uid, ...(update.$setOnInsert || {}) };

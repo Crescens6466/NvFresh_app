@@ -217,7 +217,7 @@ export function createAccountDeletionHandler(deps = {}) {
       console.error("[customerAuth] Account deletion error:", err);
       return res.status(500).json({
         ok: false,
-        error: "Could not complete account deletion right now. Please try again or contact support@nvfresh.in.",
+        error: "Could not complete account deletion right now. Please try again or contact nvfreshsupport@gmail.com.",
       });
     }
   };

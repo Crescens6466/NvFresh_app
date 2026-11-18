@@ -10,7 +10,6 @@ import {
 } from "react-icons/hi2";
 import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
-import { useToast } from "../context/ToastContext.jsx";
 import { api } from "../api.js";
 import "./StaticPage.css";
 
@@ -18,7 +17,6 @@ export default function DeleteAccount() {
   const navigate = useNavigate();
   const { profile, isLoggedIn, loading: authLoading, getIdToken, logout } = useCustomerAuth();
   const { clearCart } = useCart();
-  const { showToast } = useToast();
 
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -49,14 +47,11 @@ export default function DeleteAccount() {
       setConfirmed(false);
       clearCart();
       await logout().catch(() => {});
-      showToast(
-        status === "pending" ? "Account deletion pending completion" : "Account deleted",
-        status === "pending" ? "info" : "success"
-      );
     } catch (err) {
-      const msg = err.message || "Could not process account deletion right now. Please try again.";
+      const msg =
+        err?.message ||
+        "Could not complete account deletion right now. Please try again or contact nvfreshsupport@gmail.com.";
       setErrorMsg(msg);
-      showToast(msg, "error");
     } finally {
       setSubmitting(false);
     }
@@ -148,7 +143,12 @@ export default function DeleteAccount() {
               </span>
             </label>
 
-            {errorMsg && <p className="delete-error-text">{errorMsg}</p>}
+            {errorMsg && (
+              <div className="delete-warning-box" role="alert">
+                <HiOutlineExclamationTriangle />
+                <span>{errorMsg}</span>
+              </div>
+            )}
 
             <button
               type="submit"
@@ -156,7 +156,13 @@ export default function DeleteAccount() {
               disabled={!confirmed || submitting}
             >
               <HiOutlineTrash />
-              <span>{submitting ? "Deleting Account..." : "Permanently Delete My Account"}</span>
+              <span>
+                {submitting
+                  ? "Deleting Account..."
+                  : errorMsg
+                  ? "Try Again — Delete My Account"
+                  : "Permanently Delete My Account"}
+              </span>
             </button>
           </form>
         )}
@@ -200,10 +206,10 @@ export default function DeleteAccount() {
           If you no longer have access to your Google account or registered mobile
           number, you may submit a deletion request by emailing{" "}
           <a
-            href="mailto:support@nvfresh.in?subject=Account%20Deletion%20Request"
+            href="mailto:nvfreshsupport@gmail.com?subject=Account%20Deletion%20Request"
             className="static-link"
           >
-            support@nvfresh.in
+            nvfreshsupport@gmail.com
           </a>{" "}
           with the subject line <strong>&ldquo;Account Deletion Request&rdquo;</strong>.
         </p>
@@ -215,12 +221,12 @@ export default function DeleteAccount() {
         </p>
 
         <a
-          href="mailto:support@nvfresh.in?subject=Account%20Deletion%20Request"
+          href="mailto:nvfreshsupport@gmail.com?subject=Account%20Deletion%20Request"
           className="btn btn-outline delete-full-btn"
           style={{ marginTop: 12 }}
         >
           <HiOutlineEnvelope />
-          <span>Email support@nvfresh.in</span>
+          <span>Email nvfreshsupport@gmail.com</span>
         </a>
       </section>
 

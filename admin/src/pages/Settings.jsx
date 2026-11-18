@@ -4,7 +4,7 @@ import { api, resolveImageUrl } from "../api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import "./Settings.css";
 
-const DEFAULT_SUPPORT_EMAIL = "support@nvfresh.in";
+const DEFAULT_SUPPORT_EMAIL = "nvfreshsupport@gmail.com";
 const DEFAULT_BUSINESS_ADDRESS = "NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India";
 const DEFAULT_SUPPORT_HOURS = "Everyday, 7:00 AM – 9:00 PM";
 const DEFAULT_DELIVERY_SCHEDULE = "Orders confirmed Saturday, delivered fresh every Sunday morning";
@@ -115,7 +115,7 @@ export default function Settings() {
             type="email"
             value={form.supportEmail}
             onChange={(e) => setForm({ ...form, supportEmail: e.target.value })}
-            placeholder="support@nvfresh.in"
+            placeholder="nvfreshsupport@gmail.com"
           />
         </div>
 

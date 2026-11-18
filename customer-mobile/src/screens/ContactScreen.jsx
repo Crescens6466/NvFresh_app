@@ -9,7 +9,7 @@ import { colors, radius, shadow, spacing } from "../theme.js";
 
 const DEFAULT_SETTINGS = {
   phone: "+91 98765 43210",
-  email: "support@nvfresh.in",
+  email: "nvfreshsupport@gmail.com",
   address: "NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India",
   supportHours: "Everyday, 7:00 AM – 9:00 PM",
   deliverySchedule: "Orders confirmed Saturday, delivered fresh every Sunday morning",

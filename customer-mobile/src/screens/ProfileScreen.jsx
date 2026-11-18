@@ -36,6 +36,7 @@ export default function ProfileScreen() {
 
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   if (loading) {
     return (
@@ -72,12 +73,14 @@ export default function ProfileScreen() {
       );
       return;
     }
+    setDeleteError("");
     setDeleteModalVisible(true);
   }
 
   async function handleConfirmDeleteAccount() {
     if (deleting) return;
     setDeleting(true);
+    setDeleteError("");
     try {
       const response = await deleteAccount();
       clearCart();
@@ -90,19 +93,14 @@ export default function ProfileScreen() {
           ? "Your NvFresh profile and notification data have been deleted. Final removal of your authentication account is pending completion."
           : "Your NvFresh account and personal profile data have been permanently deleted.");
 
-      showToast(
-        isPending ? "Account deletion pending completion" : "Account deleted",
-        isPending ? "info" : "success"
-      );
       Alert.alert(
         isPending ? "Account Deletion Pending" : "Account Deleted",
         message
       );
     } catch (err) {
       const message =
-        err?.message || "Could not delete your account right now. Please try again or contact support@nvfresh.in.";
-      showToast(message, "error");
-      Alert.alert("Account Deletion Failed", message);
+        err?.message || "Could not delete your account right now. Please try again or contact nvfreshsupport@gmail.com.";
+      setDeleteError(message);
     } finally {
       setDeleting(false);
     }
@@ -209,8 +207,14 @@ export default function ProfileScreen() {
               completed orders.
             </Text>
 
+            {deleteError ? (
+              <View style={styles.modalErrorBox}>
+                <Text style={styles.modalErrorText}>{deleteError}</Text>
+              </View>
+            ) : null}
+
             <Button
-              title="Delete Account Permanently"
+              title={deleteError ? "Try Again — Delete Permanently" : "Delete Account Permanently"}
               onPress={handleConfirmDeleteAccount}
               loading={deleting}
               disabled={deleting}
@@ -219,7 +223,10 @@ export default function ProfileScreen() {
             <Button
               title="Keep My Account"
               variant="outline"
-              onPress={() => setDeleteModalVisible(false)}
+              onPress={() => {
+                setDeleteError("");
+                setDeleteModalVisible(false);
+              }}
               disabled={deleting}
               style={{ marginTop: spacing.sm }}
             />
@@ -338,5 +345,20 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: "center",
     lineHeight: 18,
+  },
+  modalErrorBox: {
+    marginTop: spacing.md,
+    backgroundColor: "#FDE7E7",
+    borderWidth: 1,
+    borderColor: "#F5C6CB",
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+  },
+  modalErrorText: {
+    fontSize: 12,
+    fontFamily: typography.body.semibold,
+    color: colors.primary,
+    textAlign: "center",
+    lineHeight: 17,
   },
 });

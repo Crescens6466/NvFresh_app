@@ -226,8 +226,8 @@ export default function Privacy() {
         <p>
           You may request access to, correction of, or deletion of personal information
           NvFresh holds about you by contacting us at{" "}
-          <a href="mailto:support@nvfresh.in" className="static-link">
-            support@nvfresh.in
+          <a href="mailto:nvfreshsupport@gmail.com" className="static-link">
+            nvfreshsupport@gmail.com
           </a>
           . You may also disable push notifications at any time through your Android
           device or browser settings, and signing out removes your active push device
@@ -256,8 +256,8 @@ export default function Privacy() {
         <p>
           If you cannot sign in to your account, you may also request account deletion
           by emailing{" "}
-          <a href="mailto:support@nvfresh.in" className="static-link">
-            support@nvfresh.in
+          <a href="mailto:nvfreshsupport@gmail.com" className="static-link">
+            nvfreshsupport@gmail.com
           </a>{" "}
           with the subject line &ldquo;Account Deletion Request&rdquo; and providing
           your registered mobile number or email address so we can verify your
@@ -280,8 +280,8 @@ export default function Privacy() {
         <p>
           If you have any questions, concerns, or privacy requests regarding this
           Privacy Policy or how NvFresh handles your information, please contact us at:{" "}
-          <a href="mailto:support@nvfresh.in" className="static-link">
-            support@nvfresh.in
+          <a href="mailto:nvfreshsupport@gmail.com" className="static-link">
+            nvfreshsupport@gmail.com
           </a>
           .
         </p>

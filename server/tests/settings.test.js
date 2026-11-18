@@ -18,7 +18,7 @@ test("Business Settings Suite", async (t) => {
     assert.equal(settingsDoc.upi_id, "nvfresh@upi");
     assert.equal(settingsDoc.qr_image, null);
     assert.equal(settingsDoc.delivery_charge, 0);
-    assert.equal(settingsDoc.support_email, "support@nvfresh.in");
+    assert.equal(settingsDoc.support_email, "nvfreshsupport@gmail.com");
     assert.equal(
       settingsDoc.business_address,
       "NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India"
@@ -32,7 +32,7 @@ test("Business Settings Suite", async (t) => {
 
   await t.test("2. Email Validation Helper", () => {
     // Valid emails
-    assert.equal(isValidEmail("support@nvfresh.in"), true);
+    assert.equal(isValidEmail("nvfreshsupport@gmail.com"), true);
     assert.equal(isValidEmail("admin.help@domain.co.in"), true);
     assert.equal(isValidEmail("contact@sub.company.org"), true);
     assert.equal(isValidEmail("  spaced@nvfresh.in  "), true);
@@ -109,7 +109,7 @@ test("Business Settings Suite", async (t) => {
     const formatted = formatSettingsResponse(legacyDoc);
 
     assert.equal(formatted.support_email, DEFAULT_SETTINGS.support_email);
-    assert.equal(formatted.supportEmail, "support@nvfresh.in");
+    assert.equal(formatted.supportEmail, "nvfreshsupport@gmail.com");
     assert.equal(formatted.business_address, DEFAULT_SETTINGS.business_address);
     assert.equal(formatted.businessAddress, "NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India");
     assert.equal(formatted.support_hours, DEFAULT_SETTINGS.support_hours);
@@ -130,7 +130,7 @@ test("Business Settings Suite", async (t) => {
       upi_id: "nvfresh@upi",
       qr_image: null,
       delivery_charge: 0,
-      support_email: "support@nvfresh.in",
+      support_email: "nvfreshsupport@gmail.com",
       business_address: "NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India",
       support_hours: "Everyday, 7:00 AM – 9:00 PM",
       delivery_schedule: "Orders confirmed Saturday, delivered fresh every Sunday morning",
@@ -161,7 +161,7 @@ test("Business Settings Suite", async (t) => {
       const getRes = await fetch(baseUrl);
       assert.equal(getRes.status, 200);
       const getData = await getRes.json();
-      assert.equal(getData.supportEmail, "support@nvfresh.in");
+      assert.equal(getData.supportEmail, "nvfreshsupport@gmail.com");
       assert.equal(getData.businessAddress, "NvFresh Fulfilment Center, Vijayawada, Andhra Pradesh, India");
       assert.equal(getData.supportHours, "Everyday, 7:00 AM – 9:00 PM");
       assert.equal(getData.deliverySchedule, "Orders confirmed Saturday, delivered fresh every Sunday morning");
