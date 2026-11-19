@@ -4,7 +4,6 @@ import { api, resolveImageUrl } from "../api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import "./Products.css";
 
-const CATEGORIES = ["Chicken", "Mutton", "Fish", "Seafood", "Country Chicken"];
 const BADGES = ["", "Best Seller", "Fresh Today", "Limited Stock"];
 const DEFAULT_WEIGHTS = ["0.5 kg", "1 kg", "1.5 kg", "2 kg"];
 
@@ -12,7 +11,7 @@ const emptyForm = {
   name: "",
   description: "",
   price: "",
-  category: CATEGORIES[0],
+  category: "",
   image: "",
   stock: "",
   badge: "",
@@ -22,6 +21,7 @@ const emptyForm = {
 export default function Products() {
   const { showToast } = useToast();
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -29,19 +29,27 @@ export default function Products() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  function loadProducts() {
+  function loadData() {
     setLoading(true);
-    api
-      .getProducts()
-      .then(setProducts)
+    Promise.all([
+      api.getProducts().catch(() => []),
+      api.getCategories().catch(() => []),
+    ])
+      .then(([prods, cats]) => {
+        setProducts(Array.isArray(prods) ? prods : []);
+        setCategories(Array.isArray(cats) ? cats : []);
+      })
       .finally(() => setLoading(false));
   }
 
-  useEffect(loadProducts, []);
+  useEffect(loadData, []);
 
   function openAddModal() {
     setEditingId(null);
-    setForm(emptyForm);
+    setForm({
+      ...emptyForm,
+      category: categories[0]?.name || "Chicken",
+    });
     setModalOpen(true);
   }
 
@@ -114,7 +122,7 @@ export default function Products() {
         showToast("Product added");
       }
       setModalOpen(false);
-      loadProducts();
+      loadData();
     } catch (err) {
       showToast(err.message || "Could not save product", "error");
     } finally {
@@ -127,7 +135,7 @@ export default function Products() {
     try {
       await api.deleteProduct(id);
       showToast("Product deleted");
-      loadProducts();
+      loadData();
     } catch (err) {
       showToast(err.message || "Could not delete product", "error");
     }
@@ -273,11 +281,14 @@ export default function Products() {
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
                   >
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
+                    {categories.map((c) => (
+                      <option key={c.id || c.name} value={c.name}>
+                        {c.name}
                       </option>
                     ))}
+                    {form.category && !categories.some((c) => c.name === form.category) && (
+                      <option value={form.category}>{form.category}</option>
+                    )}
                   </select>
                 </div>
                 <div className="field">

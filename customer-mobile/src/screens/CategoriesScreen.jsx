@@ -1,4 +1,4 @@
-// CategoriesScreen.jsx — ported from customer/src/pages/Categories.jsx.
+// CategoriesScreen.jsx — dynamic category list with product counts.
 import React, { useCallback, useState } from "react";
 import {
   RefreshControl,
@@ -16,13 +16,32 @@ import { navigate } from "../navigation/navigationRef.js";
 import { colors, radius, shadow, spacing, typography } from "../theme.js";
 import { normalizeMobileCategory } from "../utils/categories.js";
 
-const CATS = [
+const DEFAULT_MOBILE_CATS = [
   { name: "Chicken", icon: "food-drumstick", color: "#EF5350" },
   { name: "Mutton", icon: "food-steak", color: "#C62828" },
   { name: "Seafood", icon: "shrimp", color: "#EF6C00" },
 ];
 
+function getCategoryIconMeta(name, icon) {
+  const key = `${icon || ""} ${name || ""}`.toLowerCase();
+  if (key.includes("chicken")) {
+    return { iconType: "material", icon: "food-drumstick", color: "#EF5350" };
+  }
+  if (key.includes("mutton") || key.includes("meat") || key.includes("steak")) {
+    return { iconType: "material", icon: "food-steak", color: "#C62828" };
+  }
+  if (key.includes("fish")) {
+    return { iconType: "material", icon: "fish", color: "#0277BD" };
+  }
+  if (key.includes("seafood") || key.includes("shrimp") || key.includes("prawn")) {
+    return { iconType: "fa6", icon: "shrimp", color: "#EF6C00" };
+  }
+  // Sensible default icon and color for admin-created dynamic categories
+  return { iconType: "material", icon: "silverware-fork-knife", color: "#7B1FA2" };
+}
+
 export default function CategoriesScreen() {
+  const [categories, setCategories] = useState(DEFAULT_MOBILE_CATS);
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -33,7 +52,7 @@ export default function CategoriesScreen() {
   const screenWidth = width || 360;
   const cardWidth = Math.floor((screenWidth - spacing.md * 2 - 10) / 2);
 
-  const loadCounts = useCallback(async (isRefresh = false) => {
+  const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
       setRefreshing(true);
     } else {
@@ -41,11 +60,50 @@ export default function CategoriesScreen() {
     }
 
     try {
-      const products = await api.getProducts();
-      if (Array.isArray(products)) {
+      const [catsRes, productsRes] = await Promise.all([
+        api.getCategories().catch(() => DEFAULT_MOBILE_CATS),
+        api.getProducts().catch(() => []),
+      ]);
+
+      // Normalize and deduplicate dynamic categories for mobile
+      if (Array.isArray(catsRes) && catsRes.length > 0) {
+        const uniqueNames = [];
+        const dynamicCats = [];
+
+        for (const cat of catsRes) {
+          const rawName = cat.name || "";
+          const lower = rawName.toLowerCase();
+          if (lower === "all" || lower === "country chicken" || lower === "country_chicken") {
+            continue;
+          }
+          // On Android, Fish products are merged into Seafood; only show Seafood card
+          if (lower === "fish") {
+            continue;
+          }
+
+          const normalizedName = normalizeMobileCategory(rawName);
+          if (normalizedName && !uniqueNames.includes(normalizedName)) {
+            uniqueNames.push(normalizedName);
+            const { iconType, icon, color } = getCategoryIconMeta(normalizedName, cat.icon);
+            dynamicCats.push({
+              name: normalizedName,
+              iconType,
+              icon,
+              color,
+            });
+          }
+        }
+
+        if (dynamicCats.length > 0) {
+          setCategories(dynamicCats);
+        }
+      }
+
+      // Compute product counts using normalized categories
+      if (Array.isArray(productsRes)) {
         const c = {};
         const seenIds = new Set();
-        products.forEach((p) => {
+        productsRes.forEach((p) => {
           const key = p && String(p.id || p._id || "");
           if (key) {
             if (seenIds.has(key)) return;
@@ -62,7 +120,7 @@ export default function CategoriesScreen() {
         setCounts(c);
       }
     } catch (err) {
-      console.warn("[CategoriesScreen] Failed to load category product counts:", err?.message || err);
+      console.warn("[CategoriesScreen] Failed to load categories or product counts:", err?.message || err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -71,8 +129,8 @@ export default function CategoriesScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadCounts();
-    }, [loadCounts])
+      loadData();
+    }, [loadData])
   );
 
   function handleCategoryPress(categoryName) {
@@ -91,7 +149,7 @@ export default function CategoriesScreen() {
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
-          onRefresh={() => loadCounts(true)}
+          onRefresh={() => loadData(true)}
           colors={[colors.primary]}
           tintColor={colors.primary}
         />
@@ -99,7 +157,7 @@ export default function CategoriesScreen() {
     >
       <Text style={styles.title}>Shop by Category</Text>
       <View style={styles.grid}>
-        {CATS.map(({ name, icon, color }) => {
+        {categories.map(({ name, iconType, icon, color }) => {
           const count = counts[name] || 0;
           const isUnavailable = !loading && count === 0;
 
@@ -115,10 +173,10 @@ export default function CategoriesScreen() {
               onPress={() => handleCategoryPress(name)}
             >
               <View style={[styles.iconWrap, { backgroundColor: `${color}18` }]}>
-                {icon === "shrimp" ? (
+                {iconType === "fa6" || icon === "shrimp" ? (
                   <FontAwesome6 name="shrimp" size={22} color={color} />
                 ) : (
-                  <MaterialCommunityIcons name={icon} size={22} color={color} />
+                  <MaterialCommunityIcons name={icon || "silverware-fork-knife"} size={22} color={color} />
                 )}
               </View>
               <Text style={styles.cardTitle}>{name}</Text>

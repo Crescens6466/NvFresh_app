@@ -4,6 +4,7 @@ import Sidebar from "./components/Sidebar.jsx";
 import Login from "./pages/Login.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Products from "./pages/Products.jsx";
+import Categories from "./pages/Categories.jsx";
 import Orders from "./pages/Orders.jsx";
 import Customers from "./pages/Customers.jsx";
 import Settings from "./pages/Settings.jsx";
@@ -40,6 +41,14 @@ export default function App() {
         element={
           <ProtectedLayout>
             <Products />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/categories"
+        element={
+          <ProtectedLayout>
+            <Categories />
           </ProtectedLayout>
         }
       />

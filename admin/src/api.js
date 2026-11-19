@@ -1,4 +1,4 @@
-
+// api.js — fetch wrapper for the admin app
 //
 // In local dev, Vite proxies "/api" to the server on :5000 (see vite.config.js).
 // In production (e.g. Vercel), there's no server behind the static build, so
@@ -7,11 +7,6 @@
 const BASE = import.meta.env.VITE_API_URL || "/api";
 const API_ORIGIN = BASE.startsWith("http") ? BASE.replace(/\/api\/?$/, "") : "";
 
-// Product/QR images come back as paths relative to the backend (e.g.
-// "/api/files/xxx"). In dev, Vite's proxy makes that resolve correctly against
-// the frontend's own origin; in production, frontend and backend are on
-// different domains, so an <img src="/api/files/xxx"> would otherwise
-// request the frontend's own domain and get its SPA fallback HTML instead.
 export function resolveImageUrl(path) {
   if (!path) return path;
   if (/^https?:\/\//.test(path)) return path;
@@ -32,11 +27,6 @@ async function request(path, options = {}) {
       ...options.headers,
     },
   });
-  // A 401 while we sent a token means the session died (expired, or a stale
-  // offline-demo token) — not a login attempt, since login never sends one.
-  // Every write would otherwise keep silently failing with a confusing
-  // "Invalid or expired token" toast until the user thinks to log out
-  // manually. Clear it and send them back to log in again immediately.
   if (res.status === 401 && token) {
     window.localStorage.removeItem("nvfresh_admin_token");
     window.localStorage.removeItem("nvfresh_admin_username");
@@ -69,6 +59,18 @@ export const api = {
   updateProduct: (id, data) =>
     request(`/products/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteProduct: (id) => request(`/products/${id}`, { method: "DELETE" }),
+
+  getCategories: () => request(`/categories`),
+  getAdminCategories: () => request(`/categories/admin`),
+  createCategory: (data) =>
+    request(`/categories`, { method: "POST", body: JSON.stringify(data) }),
+  updateCategory: (id, data) =>
+    request(`/categories/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteCategory: (id, replacementCategory) =>
+    request(`/categories/${id}`, {
+      method: "DELETE",
+      body: JSON.stringify({ replacementCategory }),
+    }),
 
   getOrders: () => request(`/orders`),
   updateOrderStatus: (id, status, reason) =>

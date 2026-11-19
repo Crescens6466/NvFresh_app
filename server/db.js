@@ -5,6 +5,7 @@ import Admin from "./models/Admin.js";
 import Settings from "./models/Settings.js";
 import Order from "./models/Order.js";
 import { ensureDefaultDeliveryAreas } from "./utils/serviceAreas.js";
+import { ensureDefaultCategories } from "./utils/categories.js";
 
 // In a serverless runtime (Vercel), connectDB() is called on every
 // invocation — a warm instance should reuse its existing connection rather
@@ -135,4 +136,5 @@ async function seedIfEmpty() {
   }
 
   await ensureDefaultDeliveryAreas();
+  await ensureDefaultCategories();
 }

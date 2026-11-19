@@ -38,6 +38,7 @@ function authHeaders(token) {
 }
 
 export const api = {
+  getCategories: () => request(`/categories`),
   getProducts: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return request(`/products${qs ? `?${qs}` : ""}`);

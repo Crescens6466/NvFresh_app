@@ -19,6 +19,7 @@ import adminNotificationsRouter from "./routes/adminNotifications.js";
 import customerNotificationsRouter from "./routes/customerNotifications.js";
 import paymentRouter from "./routes/payment.js";
 import deliveryAreasRouter from "./routes/deliveryAreas.js";
+import categoriesRouter from "./routes/categories.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -56,6 +57,7 @@ app.use("/api/customer-notifications", customerNotificationsRouter);
 app.use("/api", paymentRouter);
 app.use("/api/payment", paymentRouter);
 app.use("/api/delivery-areas", deliveryAreasRouter);
+app.use("/api/categories", categoriesRouter);
 
 // central error handler (e.g. multer file-type errors, Mongoose errors)
 app.use((err, req, res, next) => {

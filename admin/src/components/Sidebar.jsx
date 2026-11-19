@@ -10,6 +10,7 @@ import {
 import {
   HiOutlineSquares2X2,
   HiOutlineCube,
+  HiOutlineTag,
   HiOutlineClipboardDocumentList,
   HiOutlineUsers,
   HiOutlineCog6Tooth,
@@ -23,6 +24,7 @@ import "./Sidebar.css";
 const LINKS = [
   { to: "/", label: "Dashboard", Icon: HiOutlineSquares2X2, end: true },
   { to: "/products", label: "Products", Icon: HiOutlineCube },
+  { to: "/categories", label: "Categories", Icon: HiOutlineTag },
   { to: "/orders", label: "Orders", Icon: HiOutlineClipboardDocumentList },
   { to: "/customers", label: "Customers", Icon: HiOutlineUsers },
   { to: "/delivery-areas", label: "Delivery Areas", Icon: HiOutlineMapPin },

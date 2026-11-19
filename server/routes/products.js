@@ -1,8 +1,10 @@
 // routes/products.js — product CRUD API (MongoDB)
 import express from "express";
 import Product from "../models/Product.js";
+import Category from "../models/Category.js";
 import { requireAuth } from "../middleware/auth.js";
 import { toClient, toClientList } from "../utils/serialize.js";
+import { escapeRegex, slugifyCategory } from "../utils/categories.js";
 
 const router = express.Router();
 
@@ -11,7 +13,21 @@ router.get("/", async (req, res, next) => {
   try {
     const { category, search } = req.query;
     const query = {};
-    if (category && category !== "All") query.category = category;
+    if (category && category !== "All") {
+      const trimmedCategory = String(category).trim();
+      if (trimmedCategory.toLowerCase() === "chicken") {
+        query.category = {
+          $in: [
+            new RegExp(`^${escapeRegex(trimmedCategory)}$`, "i"),
+            /^country chicken$/i,
+            /^country_chicken$/i,
+            /^countrychicken$/i,
+          ],
+        };
+      } else {
+        query.category = { $regex: new RegExp(`^${escapeRegex(trimmedCategory)}$`, "i") };
+      }
+    }
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -44,11 +60,24 @@ router.post("/", requireAuth, async (req, res, next) => {
     if (!name || !price || !category) {
       return res.status(400).json({ error: "name, price, and category are required" });
     }
+
+    const trimmedCat = String(category).trim();
+    const validCat = await Category.findOne({
+      isActive: true,
+      $or: [
+        { name: { $regex: new RegExp(`^${escapeRegex(trimmedCat)}$`, "i") } },
+        { slug: slugifyCategory(trimmedCat) },
+      ],
+    });
+    if (!validCat) {
+      return res.status(400).json({ error: `Category "${category}" is not an active category` });
+    }
+
     const product = await Product.create({
       name,
       description: description || "",
       price,
-      category,
+      category: validCat.name,
       image: image || "",
       weights: weights && weights.length ? weights : undefined,
       stock: stock || 0,
@@ -69,7 +98,20 @@ router.put("/:id", requireAuth, async (req, res, next) => {
     if (name !== undefined) update.name = name;
     if (description !== undefined) update.description = description;
     if (price !== undefined) update.price = price;
-    if (category !== undefined) update.category = category;
+    if (category !== undefined) {
+      const trimmedCat = String(category).trim();
+      const validCat = await Category.findOne({
+        isActive: true,
+        $or: [
+          { name: { $regex: new RegExp(`^${escapeRegex(trimmedCat)}$`, "i") } },
+          { slug: slugifyCategory(trimmedCat) },
+        ],
+      });
+      if (!validCat) {
+        return res.status(400).json({ error: `Category "${category}" is not an active category` });
+      }
+      update.category = validCat.name;
+    }
     if (image !== undefined) update.image = image;
     if (weights && weights.length) update.weights = weights;
     if (stock !== undefined) update.stock = stock;

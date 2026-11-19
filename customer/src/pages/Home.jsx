@@ -17,12 +17,30 @@ import "./Home.css";
 export default function Home() {
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState(WEBSITE_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
   const [category, setCategory] = useState(normalizeCategory(searchParams.get("category")) || "All");
   const [search, setSearch] = useState("");
   const [deliveryAreas, setDeliveryAreas] = useState([]);
+
+  useEffect(() => {
+    api
+      .getCategories()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const names = data
+            .map((c) => c.name)
+            .filter((name) => {
+              const lower = name.toLowerCase();
+              return lower !== "all" && lower !== "country chicken" && lower !== "country_chicken";
+            });
+          setCategories(["All", ...names]);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     api
@@ -119,7 +137,7 @@ export default function Home() {
 
       {/* Category chips */}
       <div className="category-scroll">
-        {WEBSITE_CATEGORIES.map((c) => (
+        {categories.map((c) => (
           <button
             key={c}
             className={`category-chip ${category === c ? "is-active" : ""}`}

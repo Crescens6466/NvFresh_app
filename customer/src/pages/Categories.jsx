@@ -1,18 +1,31 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { GiChicken, GiMeat, GiFishCorpse, GiShrimp } from "react-icons/gi";
+import { GiChicken, GiMeat, GiFishCorpse, GiShrimp, GiCookingPot } from "react-icons/gi";
 import { api } from "../api.js";
 import { normalizeCategory } from "../utils/categories.js";
 import "./Categories.css";
 
-const CATS = [
-  { name: "Chicken", Icon: GiChicken, color: "#EF5350" },
-  { name: "Mutton", Icon: GiMeat, color: "#C62828" },
-  { name: "Fish", Icon: GiFishCorpse, color: "#0277BD" },
-  { name: "Seafood", Icon: GiShrimp, color: "#EF6C00" },
+const DEFAULT_CATS = [
+  { name: "Chicken", icon: "chicken" },
+  { name: "Mutton", icon: "meat" },
+  { name: "Fish", icon: "fish" },
+  { name: "Seafood", icon: "seafood" },
 ];
 
+function getCategoryIcon(catName, catIcon) {
+  const key = `${catIcon || ""} ${catName || ""}`.toLowerCase();
+  if (key.includes("chicken")) return { Icon: GiChicken, color: "#EF5350" };
+  if (key.includes("mutton") || key.includes("meat")) return { Icon: GiMeat, color: "#C62828" };
+  if (key.includes("fish")) return { Icon: GiFishCorpse, color: "#0277BD" };
+  if (key.includes("seafood") || key.includes("prawn") || key.includes("shrimp")) {
+    return { Icon: GiShrimp, color: "#EF6C00" };
+  }
+  // Sensible fallback icon for admin-created dynamic categories
+  return { Icon: GiCookingPot, color: "#7B1FA2" };
+}
+
 export default function Categories() {
+  const [categories, setCategories] = useState(DEFAULT_CATS);
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -23,10 +36,28 @@ export default function Categories() {
     let isMounted = true;
     setLoading(true);
     setError("");
-    api
-      .getProducts()
-      .then((products) => {
+
+    Promise.all([
+      api.getCategories().catch(() => DEFAULT_CATS),
+      api.getProducts().catch((err) => {
+        throw err;
+      }),
+    ])
+      .then(([cats, products]) => {
         if (!isMounted) return;
+
+        // Dynamic categories list from API (filtering out Country Chicken and All)
+        if (Array.isArray(cats) && cats.length > 0) {
+          const activeCats = cats.filter((c) => {
+            const lower = (c.name || "").toLowerCase();
+            return lower !== "all" && lower !== "country chicken" && lower !== "country_chicken";
+          });
+          if (activeCats.length > 0) {
+            setCategories(activeCats);
+          }
+        }
+
+        // Product counts per category
         const c = {};
         const seenIds = new Set();
         if (Array.isArray(products)) {
@@ -79,13 +110,15 @@ export default function Categories() {
         </div>
       )}
       <div className="categories-grid">
-        {CATS.map(({ name, Icon, color }) => {
+        {categories.map((cat) => {
+          const name = cat.name;
+          const { Icon, color } = getCategoryIcon(name, cat.icon);
           const count = counts[name] || 0;
           const isUnavailable = !loading && !error && count === 0;
 
           return (
             <button
-              key={name}
+              key={cat.id || name}
               className={`category-card ${isUnavailable ? "is-unavailable" : ""}`}
               onClick={() => navigate(`/?category=${encodeURIComponent(name)}`)}
               style={{ "--cat-color": color }}

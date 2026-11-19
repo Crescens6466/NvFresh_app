@@ -16,12 +16,41 @@ import {
 
 export default function HomeScreen({ route }) {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState(MOBILE_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [category, setCategory] = useState(normalizeMobileCategory(route.params?.category) || "All");
   const [search, setSearch] = useState("");
   const [deliveryAreas, setDeliveryAreas] = useState([]);
+
+  function loadCategories() {
+    api
+      .getCategories()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const names = [];
+          for (const c of data) {
+            const normalized = normalizeMobileCategory(c.name);
+            if (
+              normalized &&
+              normalized.toLowerCase() !== "all" &&
+              !names.includes(normalized)
+            ) {
+              names.push(normalized);
+            }
+          }
+          if (names.length > 0) {
+            setCategories(["All", ...names]);
+          }
+        }
+      })
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
 
   useEffect(() => {
     api
@@ -74,6 +103,7 @@ export default function HomeScreen({ route }) {
 
   function handleRefresh() {
     setRefreshing(true);
+    loadCategories();
     loadProducts(false);
   }
 
@@ -128,7 +158,7 @@ export default function HomeScreen({ route }) {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={{ gap: 8, paddingHorizontal: spacing.lg }}>
-        {MOBILE_CATEGORIES.map((c) => (
+        {categories.map((c) => (
           <Text
             key={c}
             onPress={() => setCategory(c)}

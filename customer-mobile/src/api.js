@@ -48,6 +48,7 @@ function authHeaders(token) {
 }
 
 export const api = {
+  getCategories: () => request(`/categories`),
   getProducts: (params = {}) => {
     const cleanParams = {};
     if (params.category && params.category !== "All") {
