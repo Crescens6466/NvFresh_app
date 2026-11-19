@@ -38,7 +38,7 @@ export default function AppHeader() {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.cartButton}
-        onPress={() => navigate("Main", { screen: "Cart" })}
+        onPress={() => navigate("Main", { screen: "Cart", params: { screen: "CartMain" } })}
         accessibilityLabel="Open cart"
       >
         <Ionicons name="bag-outline" size={22} color={colors.text} />

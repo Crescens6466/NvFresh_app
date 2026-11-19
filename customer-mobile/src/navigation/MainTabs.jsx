@@ -1,8 +1,12 @@
 // MainTabs.jsx — ported from customer/src/components/BottomNav.jsx: the
 // 4-tab bottom nav (Home, Categories, Cart, Profile) with a cart badge.
+// The Cart tab hosts a stack (CartMain + Payment) so that the Advance Payment
+// screen retains the shared bottom navigation bar with Cart highlighted,
+// exactly matching the website experience.
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../context/CartContext.jsx";
@@ -11,8 +15,19 @@ import HomeScreen from "../screens/HomeScreen.jsx";
 import CategoriesScreen from "../screens/CategoriesScreen.jsx";
 import CartScreen from "../screens/CartScreen.jsx";
 import ProfileScreen from "../screens/ProfileScreen.jsx";
+import PaymentScreen from "../screens/PaymentScreen.jsx";
 
 const Tab = createBottomTabNavigator();
+const CartStack = createNativeStackNavigator();
+
+function CartStackNavigator() {
+  return (
+    <CartStack.Navigator screenOptions={{ headerShown: false }}>
+      <CartStack.Screen name="CartMain" component={CartScreen} />
+      <CartStack.Screen name="Payment" component={PaymentScreen} />
+    </CartStack.Navigator>
+  );
+}
 
 const ICONS = {
   Home: ["home-outline", "home"],
@@ -60,7 +75,15 @@ export default function MainTabs() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Categories" component={CategoriesScreen} />
-      <Tab.Screen name="Cart" component={CartScreen} />
+      <Tab.Screen
+        name="Cart"
+        component={CartStackNavigator}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate("Cart", { screen: "CartMain" });
+          },
+        })}
+      />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

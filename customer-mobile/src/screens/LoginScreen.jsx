@@ -47,8 +47,15 @@ export default function LoginScreen() {
   function afterLogin() {
     showToast("Signed in successfully");
     const from = route.params?.from;
-    if (from) navigation.replace(from.name, from.params);
-    else navigation.replace("Main", { screen: "Profile" });
+    if (from) {
+      if (from.name === "Payment") {
+        navigation.replace("Main", { screen: "Cart", params: { screen: "Payment" } });
+      } else {
+        navigation.replace(from.name, from.params);
+      }
+    } else {
+      navigation.replace("Main", { screen: "Profile" });
+    }
   }
 
   async function handleSendOtp() {

@@ -49,8 +49,13 @@ export default function CartScreen() {
 
   function handleCheckout() {
     if (hasUnavailableItems) return;
-    if (isLoggedIn) navigation.navigate("Payment");
-    else navigation.navigate("Login", { from: { name: "Payment" } });
+    if (isLoggedIn) {
+      navigation.navigate("Payment");
+    } else {
+      navigation.navigate("Login", {
+        from: { name: "Main", params: { screen: "Cart", params: { screen: "Payment" } } },
+      });
+    }
   }
 
   if (items.length === 0) {

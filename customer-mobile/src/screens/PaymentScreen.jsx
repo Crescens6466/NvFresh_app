@@ -92,12 +92,18 @@ export default function PaymentScreen() {
 
   useEffect(() => {
     if (items.length === 0) {
-      navigation.replace("Main", { screen: "Cart" });
+      if (navigation.canGoBack()) navigation.goBack();
+      else navigation.navigate("CartMain");
       return;
     }
     // Checkout requires a signed-in customer
     if (!authLoading && !isLoggedIn) {
-      navigation.replace("Login", { from: { name: "Payment" } });
+      const rootNav = navigation.getParent()?.getParent();
+      if (rootNav?.navigate) {
+        rootNav.navigate("Login", { from: { name: "Main", params: { screen: "Cart", params: { screen: "Payment" } } } });
+      } else {
+        navigation.navigate("Login", { from: { name: "Main", params: { screen: "Cart", params: { screen: "Payment" } } } });
+      }
     }
   }, [authLoading, isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -240,7 +246,13 @@ export default function PaymentScreen() {
 
             clearCart();
             showToast("Payment verified! Order placed successfully.", "success");
-            navigation.replace("OrderSuccess");
+            const rootNav = navigation.getParent()?.getParent();
+            if (rootNav?.navigate) {
+              navigation.goBack();
+              rootNav.navigate("OrderSuccess");
+            } else {
+              navigation.navigate("OrderSuccess");
+            }
           } catch (verifyErr) {
             console.error("[payment] Native verification failed:", verifyErr);
             const msg = verifyErr.message || "Payment verification failed. Please contact support.";
@@ -302,7 +314,7 @@ export default function PaymentScreen() {
           keyboardDismissMode="on-drag"
           contentContainerStyle={[
             styles.container,
-            { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 40 },
+            { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 80 },
           ]}
         >
           <View style={styles.notice}>
@@ -322,7 +334,7 @@ export default function PaymentScreen() {
           <View style={styles.orderSummaryCard}>
             <View style={styles.orderSummaryHeader}>
               <Text style={styles.orderSummaryTitle}>Items in Order ({items.length})</Text>
-              <TouchableOpacity onPress={() => navigation.navigate("Main", { screen: "Cart" })}>
+              <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate("CartMain"))}>
                 <Text style={styles.orderSummaryEdit}>Edit Cart</Text>
               </TouchableOpacity>
             </View>
@@ -343,7 +355,7 @@ export default function PaymentScreen() {
               <Text style={styles.errorText}>{quoteError}</Text>
               <TouchableOpacity
                 style={styles.errorButton}
-                onPress={() => navigation.navigate("Main", { screen: "Cart" })}
+                onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate("CartMain"))}
               >
                 <Text style={styles.errorButtonText}>Return to Cart</Text>
               </TouchableOpacity>
@@ -517,7 +529,7 @@ export default function PaymentScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  container: { padding: spacing.lg, paddingTop: 0, paddingBottom: 40 },
+  container: { padding: spacing.lg, paddingTop: 0, paddingBottom: 80 },
   notice: {
     backgroundColor: "#FFF3CD",
     borderRadius: radius.sm,

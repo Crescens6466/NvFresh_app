@@ -83,7 +83,7 @@ export default function ProductDetailsScreen({ route }) {
   function handleBuyNow() {
     if (!isAvailable) return;
     addToCart(product, weight, qty, unitPrice);
-    navigation.navigate("Main", { screen: "Cart" });
+    navigation.navigate("Main", { screen: "Cart", params: { screen: "CartMain" } });
   }
 
   return (

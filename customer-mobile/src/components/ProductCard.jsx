@@ -40,7 +40,7 @@ export default function ProductCard({ product }) {
     if (inCartQty === 0) {
       addToCart(product, weight, 1, displayPrice);
     }
-    navigation.navigate("Main", { screen: "Cart" });
+    navigation.navigate("Main", { screen: "Cart", params: { screen: "CartMain" } });
   }
 
   return (
