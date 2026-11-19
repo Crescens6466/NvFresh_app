@@ -42,6 +42,9 @@ export function CustomerAuthProvider({ children }) {
 
   async function loginWithGoogle() {
     if (!auth) throw new Error("Google sign-in isn't set up yet — please check back soon.");
+    googleProvider.setCustomParameters({
+      prompt: "select_account",
+    });
     await signInWithPopup(auth, googleProvider);
   }
 
@@ -68,8 +71,8 @@ export function CustomerAuthProvider({ children }) {
       window.localStorage.removeItem(PHONE_SESSION_KEY);
       setPhoneSession(null);
     }
-    if (auth && firebaseUser) {
-      await signOut(auth);
+    if (auth) {
+      await signOut(auth).catch(() => {});
     }
   }
 

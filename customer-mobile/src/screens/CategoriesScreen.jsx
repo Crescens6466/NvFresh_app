@@ -20,7 +20,6 @@ const CATS = [
   { name: "Chicken", icon: "food-drumstick", color: "#EF5350" },
   { name: "Mutton", icon: "food-steak", color: "#C62828" },
   { name: "Seafood", icon: "shrimp", color: "#EF6C00" },
-  { name: "Country Chicken", icon: "food-drumstick-outline", color: "#AD1457" },
 ];
 
 export default function CategoriesScreen() {

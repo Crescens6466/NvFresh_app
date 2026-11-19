@@ -13,6 +13,7 @@ import { api, resolveImageUrl } from "../api.js";
 import { useCart } from "../context/CartContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { priceForWeight } from "../utils.js";
+import { normalizeProductForCustomer } from "../utils/categories.js";
 import "./ProductDetails.css";
 
 const BENEFITS = [
@@ -38,8 +39,9 @@ export default function ProductDetails() {
     api
       .getProduct(id)
       .then((p) => {
-        setProduct(p);
-        setWeight(p.weights[1] || p.weights[0]);
+        const normalized = normalizeProductForCustomer(p);
+        setProduct(normalized);
+        setWeight(normalized.weights[1] || normalized.weights[0]);
       })
       .finally(() => setLoading(false));
   }, [id]);

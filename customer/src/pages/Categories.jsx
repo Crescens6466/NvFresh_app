@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GiChicken, GiMeat, GiFishCorpse, GiShrimp } from "react-icons/gi";
 import { api } from "../api.js";
+import { normalizeCategory } from "../utils/categories.js";
 import "./Categories.css";
 
 const CATS = [
@@ -9,7 +10,6 @@ const CATS = [
   { name: "Mutton", Icon: GiMeat, color: "#C62828" },
   { name: "Fish", Icon: GiFishCorpse, color: "#0277BD" },
   { name: "Seafood", Icon: GiShrimp, color: "#EF6C00" },
-  { name: "Country Chicken", Icon: GiChicken, color: "#AD1457" },
 ];
 
 export default function Categories() {
@@ -28,10 +28,19 @@ export default function Categories() {
       .then((products) => {
         if (!isMounted) return;
         const c = {};
+        const seenIds = new Set();
         if (Array.isArray(products)) {
           products.forEach((p) => {
+            const key = p && String(p.id || p._id || "");
+            if (key) {
+              if (seenIds.has(key)) return;
+              seenIds.add(key);
+            }
             if (p && p.isAvailable !== false && p.category) {
-              c[p.category] = (c[p.category] || 0) + 1;
+              const cat = normalizeCategory(p.category);
+              if (cat) {
+                c[cat] = (c[cat] || 0) + 1;
+              }
             }
           });
         }

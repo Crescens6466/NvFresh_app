@@ -7,9 +7,12 @@ import { api } from "../api.js";
 import { formatDeliveryLocationsLine } from "../utils/serviceAreas.js";
 import ProductCard from "../components/ProductCard.jsx";
 import { ProductGridSkeleton } from "../components/Skeleton.jsx";
+import {
+  WEBSITE_CATEGORIES,
+  filterAndMergeProducts,
+  normalizeCategory,
+} from "../utils/categories.js";
 import "./Home.css";
-
-const CATEGORIES = ["All", "Chicken", "Mutton", "Fish", "Seafood", "Country Chicken"];
 
 export default function Home() {
   const [searchParams] = useSearchParams();
@@ -17,7 +20,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
-  const [category, setCategory] = useState(searchParams.get("category") || "All");
+  const [category, setCategory] = useState(normalizeCategory(searchParams.get("category")) || "All");
   const [search, setSearch] = useState("");
   const [deliveryAreas, setDeliveryAreas] = useState([]);
 
@@ -29,15 +32,29 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const param = searchParams.get("category");
+    if (param) {
+      setCategory(normalizeCategory(param) || "All");
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     let active = true;
     setLoading(true);
     setError("");
+    // Country Chicken is merged into Chicken on the customer website, so fetch
+    // without a single-category backend filter when Chicken or All is active.
+    const requestParams =
+      category === "Chicken" || category === "All"
+        ? (search ? { search } : {})
+        : (search ? { category, search } : { category });
+
     const timer = setTimeout(() => {
       api
-        .getProducts({ category, search })
+        .getProducts(requestParams)
         .then((data) => {
           if (!active) return;
-          setProducts(Array.isArray(data) ? data : []);
+          setProducts(filterAndMergeProducts(data, category));
           setError("");
         })
         .catch((err) => {
@@ -102,7 +119,7 @@ export default function Home() {
 
       {/* Category chips */}
       <div className="category-scroll">
-        {CATEGORIES.map((c) => (
+        {WEBSITE_CATEGORIES.map((c) => (
           <button
             key={c}
             className={`category-chip ${category === c ? "is-active" : ""}`}

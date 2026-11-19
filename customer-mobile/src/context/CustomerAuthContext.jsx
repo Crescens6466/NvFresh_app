@@ -80,6 +80,10 @@ export function CustomerAuthProvider({ children }) {
     }
     configureGoogleSignIn();
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    // Clear any cached native Google Sign-In session so that tapping Google Sign-In
+    // always starts an interactive account-selection flow rather than automatically reusing
+    // the previous account.
+    await GoogleSignin.signOut().catch(() => {});
     let result;
     try {
       result = await GoogleSignin.signIn();
@@ -124,12 +128,13 @@ export function CustomerAuthProvider({ children }) {
       .then((token) => (token ? unregisterCurrentAndroidDeviceToken(token) : null))
       .catch(() => {});
     if (phoneSession) {
-      await AsyncStorage.removeItem(PHONE_SESSION_KEY);
+      await AsyncStorage.removeItem(PHONE_SESSION_KEY).catch(() => {});
       setPhoneSession(null);
     }
-    if (auth && firebaseUser) {
-      await signOut(auth);
+    if (auth) {
+      await signOut(auth).catch(() => {});
     }
+    await GoogleSignin.signOut().catch(() => {});
   }
 
   async function deleteAccount() {
@@ -150,10 +155,10 @@ export function CustomerAuthProvider({ children }) {
       await AsyncStorage.removeItem(PHONE_SESSION_KEY).catch(() => {});
       setPhoneSession(null);
     }
-    if (auth && firebaseUser) {
+    if (auth) {
       await signOut(auth).catch(() => {});
-      await GoogleSignin.signOut().catch(() => {});
     }
+    await GoogleSignin.signOut().catch(() => {});
 
     return response;
   }

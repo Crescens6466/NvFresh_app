@@ -1,18 +1,29 @@
-// utils/categories.js — Android category display and Fish -> Seafood merge helpers.
+// utils/categories.js — Android category display and category merge helpers.
 
-export const MOBILE_CATEGORIES = ["All", "Chicken", "Mutton", "Seafood", "Country Chicken"];
+export const MOBILE_CATEGORIES = ["All", "Chicken", "Mutton", "Seafood"];
 
+const CHICKEN_SOURCE_CATEGORIES = new Set([
+  "chicken",
+  "country chicken",
+  "country_chicken",
+  "countrychicken",
+]);
 const SEAFOOD_SOURCE_CATEGORIES = new Set(["fish", "seafood", "prawns"]);
 
 /**
  * Maps backend category names to the Android app's displayed category name.
+ * Country Chicken products are displayed under Chicken.
  * Fish (and legacy Prawns) products are displayed under Seafood in Android.
  */
 export function normalizeMobileCategory(category) {
   if (typeof category !== "string") return "";
   const trimmed = category.trim();
   if (!trimmed) return "";
-  if (SEAFOOD_SOURCE_CATEGORIES.has(trimmed.toLowerCase())) {
+  const lower = trimmed.toLowerCase();
+  if (CHICKEN_SOURCE_CATEGORIES.has(lower)) {
+    return "Chicken";
+  }
+  if (SEAFOOD_SOURCE_CATEGORIES.has(lower)) {
     return "Seafood";
   }
   return trimmed;
@@ -32,7 +43,7 @@ export function normalizeProductForMobile(product) {
 
 /**
  * Normalizes product categories, removes duplicates by id, and applies the
- * selected Android category filter (merging Fish + Seafood under Seafood).
+ * selected Android category filter (merging Country Chicken under Chicken, and Fish + Seafood under Seafood).
  */
 export function filterAndMergeMobileProducts(products, selectedCategory = "All") {
   if (!Array.isArray(products)) return [];

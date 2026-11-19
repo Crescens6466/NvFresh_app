@@ -41,10 +41,13 @@ export default function HomeScreen({ route }) {
   function loadProducts(showSkeleton = true) {
     if (showSkeleton) setLoading(true);
     setError(null);
-    // Seafood in Android merges both backend "Fish" and "Seafood" categories,
-    // so fetch without a single-category backend filter when Seafood is active.
+    // Chicken in Android merges backend "Chicken" and "Country Chicken",
+    // and Seafood merges backend "Fish" and "Seafood",
+    // so fetch without a single-category backend filter when Chicken, Seafood, or All is active.
     const requestParams =
-      category === "Seafood" ? { search } : { category, search };
+      category === "Chicken" || category === "Seafood" || category === "All"
+        ? (search ? { search } : {})
+        : (search ? { category, search } : { category });
     api
       .getProducts(requestParams)
       .then((data) => {
