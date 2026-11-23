@@ -12,10 +12,22 @@ const API_ORIGIN = BASE.startsWith("http") ? BASE.replace(/\/api\/?$/, "") : "";
 // the frontend's own origin; in production, frontend and backend are on
 // different domains, so an <img src="/api/files/xxx"> would otherwise
 // request the frontend's own domain and get its SPA fallback HTML instead.
-export function resolveImageUrl(path) {
+export function resolveImageUrl(path, variant) {
   if (!path) return path;
-  if (/^https?:\/\//.test(path)) return path;
-  return `${API_ORIGIN}${path}`;
+  if (/^https?:\/\//.test(path) || /^data:/.test(path)) return path;
+  let url = `${API_ORIGIN}${path}`;
+  if (variant && path.startsWith("/api/files/")) {
+    const separator = url.includes("?") ? "&" : "?";
+    if (variant === "thumb" || variant === "thumbnail") {
+      url += `${separator}size=thumb`;
+    } else if (variant === "detail" || variant === "large") {
+      url += `${separator}size=detail`;
+    } else if (typeof variant === "object") {
+      const qs = new URLSearchParams(variant).toString();
+      if (qs) url += `${separator}${qs}`;
+    }
+  }
+  return url;
 }
 
 async function request(path, options = {}) {

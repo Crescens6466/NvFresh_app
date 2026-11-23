@@ -365,9 +365,11 @@ export default function Payment() {
           {items.map((item) => (
             <div key={item.key} className="payment-order-item-row">
               <img
-                src={resolveImageUrl(item.image)}
+                src={resolveImageUrl(item.image, "thumb")}
                 alt={item.name}
                 className="payment-order-item-thumb"
+                loading="lazy"
+                decoding="async"
               />
               <div className="payment-order-item-info">
                 <div className="payment-order-item-name">{item.name}</div>

@@ -14,10 +14,22 @@ const API_ORIGIN = BASE.replace(/\/api\/?$/, "");
 // Product/QR images come back as paths relative to the backend (e.g.
 // "/api/files/xxx"). There's no same-origin proxy on native, so these always
 // need to be resolved to an absolute URL against the backend's own origin.
-export function resolveImageUrl(path) {
+export function resolveImageUrl(path, variant) {
   if (!path) return path;
   if (/^https?:\/\//.test(path) || /^data:/.test(path)) return path;
-  return `${API_ORIGIN}${path}`;
+  let url = `${API_ORIGIN}${path}`;
+  if (variant && path.startsWith("/api/files/")) {
+    const separator = url.includes("?") ? "&" : "?";
+    if (variant === "thumb" || variant === "thumbnail") {
+      url += `${separator}size=thumb`;
+    } else if (variant === "detail" || variant === "large") {
+      url += `${separator}size=detail`;
+    } else if (typeof variant === "object") {
+      const qs = new URLSearchParams(variant).toString();
+      if (qs) url += `${separator}${qs}`;
+    }
+  }
+  return url;
 }
 
 async function request(path, options = {}) {

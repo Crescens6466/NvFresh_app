@@ -340,7 +340,10 @@ export default function PaymentScreen() {
             </View>
             {items.map((item) => (
               <View key={item.key} style={styles.orderItemRow}>
-                <Image source={{ uri: resolveImageUrl(item.image) }} style={styles.orderItemThumb} />
+                <Image
+                  source={{ uri: resolveImageUrl(item.image, "thumb"), cache: "force-cache" }}
+                  style={styles.orderItemThumb}
+                />
                 <View style={styles.orderItemInfo}>
                   <Text style={styles.orderItemName} numberOfLines={1}>{item.name}</Text>
                   <Text style={styles.orderItemMeta}>{item.weight} × {item.quantity}</Text>

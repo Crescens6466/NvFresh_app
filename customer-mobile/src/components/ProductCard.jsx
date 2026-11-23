@@ -50,7 +50,10 @@ export default function ProductCard({ product }) {
       onPress={() => navigation.navigate("ProductDetails", { productId: product.id })}
     >
       <View style={styles.imageWrap}>
-        <Image source={{ uri: resolveImageUrl(product.image) }} style={styles.image} />
+        <Image
+          source={{ uri: resolveImageUrl(product.image, "thumb"), cache: "force-cache" }}
+          style={styles.image}
+        />
         {!isAvailable ? (
           <View style={[styles.badge, { backgroundColor: colors.danger || "#C62828" }]}>
             <Text style={styles.badgeText}>Not Available</Text>

@@ -25,6 +25,10 @@ test("Dynamic Category Management Suite", async (t) => {
   await t.test("Setup test server and database connection", async () => {
     await connectDB();
     await ensureDefaultCategories();
+    await Category.updateMany(
+      { slug: { $in: ["chicken", "mutton", "fish", "seafood"] } },
+      { $set: { isActive: true } }
+    );
 
     adminToken = jwt.sign({ id: "admin_test", username: "admin" }, JWT_SECRET, { expiresIn: "1h" });
 

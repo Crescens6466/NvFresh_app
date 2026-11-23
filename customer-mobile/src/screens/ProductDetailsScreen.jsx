@@ -93,7 +93,10 @@ export default function ProductDetailsScreen({ route }) {
           <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()} accessibilityLabel="Go back">
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
-          <Image source={{ uri: resolveImageUrl(product.image) }} style={styles.image} />
+          <Image
+            source={{ uri: resolveImageUrl(product.image, "detail"), cache: "force-cache" }}
+            style={styles.image}
+          />
           {!isAvailable ? (
             <View style={[styles.badge, { backgroundColor: colors.danger || "#C62828" }]}>
               <Text style={styles.badgeText}>Not Available</Text>

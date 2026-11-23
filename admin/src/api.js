@@ -7,10 +7,22 @@
 const BASE = import.meta.env.VITE_API_URL || "/api";
 const API_ORIGIN = BASE.startsWith("http") ? BASE.replace(/\/api\/?$/, "") : "";
 
-export function resolveImageUrl(path) {
+export function resolveImageUrl(path, variant) {
   if (!path) return path;
-  if (/^https?:\/\//.test(path)) return path;
-  return `${API_ORIGIN}${path}`;
+  if (/^https?:\/\//.test(path) || /^data:/.test(path)) return path;
+  let url = `${API_ORIGIN}${path}`;
+  if (variant && path.startsWith("/api/files/")) {
+    const separator = url.includes("?") ? "&" : "?";
+    if (variant === "thumb" || variant === "thumbnail") {
+      url += `${separator}size=thumb`;
+    } else if (variant === "detail" || variant === "large") {
+      url += `${separator}size=detail`;
+    } else if (typeof variant === "object") {
+      const qs = new URLSearchParams(variant).toString();
+      if (qs) url += `${separator}${qs}`;
+    }
+  }
+  return url;
 }
 
 function getToken() {

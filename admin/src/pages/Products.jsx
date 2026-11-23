@@ -169,7 +169,7 @@ export default function Products() {
         <div className="products-grid">
           {products.map((p) => (
             <div className="product-admin-card" key={p.id}>
-              <img src={resolveImageUrl(p.image)} alt={p.name} />
+              <img src={resolveImageUrl(p.image, "thumb")} alt={p.name} loading="lazy" decoding="async" />
               <div className="product-admin-body">
                 <div className="product-admin-top">
                   <h4>{p.name}</h4>

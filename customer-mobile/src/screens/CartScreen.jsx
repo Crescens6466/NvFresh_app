@@ -83,7 +83,10 @@ export default function CartScreen() {
           const isItemUnavailable = unavailableProductIds.has(String(item.productId));
           return (
             <View style={[styles.item, isItemUnavailable && styles.itemUnavailable]}>
-              <Image source={{ uri: resolveImageUrl(item.image) }} style={styles.itemImage} />
+              <Image
+                source={{ uri: resolveImageUrl(item.image, "thumb"), cache: "force-cache" }}
+                style={styles.itemImage}
+              />
               <View style={styles.itemInfo}>
                 <View style={styles.nameRow}>
                   <Text style={styles.itemName}>{item.name}</Text>

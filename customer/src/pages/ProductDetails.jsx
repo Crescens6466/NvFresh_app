@@ -92,7 +92,12 @@ export default function ProductDetails() {
         <button className="pd-back" onClick={() => navigate(-1)} aria-label="Go back">
           <HiArrowLeft />
         </button>
-        <img src={resolveImageUrl(product.image)} alt={product.name} className="pd-image" />
+        <img
+          src={resolveImageUrl(product.image, "detail")}
+          alt={product.name}
+          className="pd-image"
+          decoding="async"
+        />
         {!isAvailable ? (
           <span className="badge pd-badge badge-not-available">Not Available</span>
         ) : product.badge ? (

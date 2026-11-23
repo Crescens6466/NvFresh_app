@@ -74,7 +74,13 @@ export default function Cart() {
           const isItemUnavailable = unavailableProductIds.has(String(item.productId));
           return (
             <div className={`cart-item ${isItemUnavailable ? "cart-item-unavailable" : ""}`} key={item.key}>
-              <img src={resolveImageUrl(item.image)} alt={item.name} className="cart-item-image" />
+              <img
+                src={resolveImageUrl(item.image, "thumb")}
+                alt={item.name}
+                className="cart-item-image"
+                loading="lazy"
+                decoding="async"
+              />
               <div className="cart-item-info">
                 <div className="cart-item-title-row">
                   <h4>{item.name}</h4>

@@ -45,7 +45,13 @@ export default function ProductCard({ product }) {
   return (
     <div className="product-card" onClick={() => navigate(`/product/${product.id}`)}>
       <div className="product-card-image-wrap">
-        <img src={resolveImageUrl(product.image)} alt={product.name} className="product-card-image" loading="lazy" />
+        <img
+          src={resolveImageUrl(product.image, "thumb")}
+          alt={product.name}
+          className="product-card-image"
+          loading="lazy"
+          decoding="async"
+        />
         {!isAvailable ? (
           <span className="badge product-card-badge badge-not-available">
             Not Available
