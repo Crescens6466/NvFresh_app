@@ -42,3 +42,39 @@ export async function requireCustomerAuth(req, res, next) {
     return res.status(401).json({ error: "Invalid or expired session" });
   }
 }
+
+export async function optionalCustomerAuth(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) {
+    req.customer = null;
+    return next();
+  }
+  const token = header.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, CUSTOMER_JWT_SECRET);
+    req.customer = {
+      uid: decoded.uid,
+      phone: decoded.phone,
+      email: null,
+      name: null,
+      authProvider: "phone",
+      tokenIssuedAt: decoded.iat ? new Date(decoded.iat * 1000) : null,
+    };
+    return next();
+  } catch {
+    // try firebase
+  }
+
+  try {
+    const verified = await verifyFirebaseIdToken(token);
+    req.customer = {
+      ...verified,
+      authProvider: "firebase",
+    };
+    return next();
+  } catch {
+    req.customer = null;
+    return next();
+  }
+}

@@ -25,6 +25,7 @@ import {
 } from "../utils/serviceAreas.js";
 import ScreenHeader from "../components/ScreenHeader.jsx";
 import Button from "../components/Button.jsx";
+import DeliveryLocationPickerModal from "../components/DeliveryLocationPickerModal.jsx";
 import { colors, radius, shadow, spacing, typography } from "../theme.js";
 
 const ADVANCE_OPTIONS = [25, 50, 75, 100];
@@ -48,10 +49,21 @@ export default function PaymentScreen() {
     phone: profile?.phone || "",
     address: "",
   });
+  const [deliveryLocation, setDeliveryLocation] = useState(null);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deliveryAreas, setDeliveryAreas] = useState([]);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollViewRef = useRef(null);
+
+  function handleLocationConfirm(loc) {
+    setDeliveryLocation(loc);
+    const activeNames = deliveryAreas.length > 0 ? deliveryAreas.map((a) => a.name) : undefined;
+    if (!form.address || form.address.trim() === "" || !isDeliveryAreaServiceable(form.address, activeNames)) {
+      setField("address", loc.formattedAddress);
+    }
+    showToast(`Delivery pin confirmed in ${loc.deliveryArea}!`, "success");
+  }
 
   // Sync saved profile details when loaded
   useEffect(() => {
@@ -184,6 +196,7 @@ export default function PaymentScreen() {
         customerName: trimmedName,
         phone: trimmedPhone,
         address: trimmedAddress,
+        deliveryLocation: deliveryLocation || undefined,
         amount: Math.round(quote.advanceAmount * 100),
       };
 
@@ -237,6 +250,7 @@ export default function PaymentScreen() {
                   customerName: trimmedName,
                   phone: trimmedPhone,
                   address: trimmedAddress,
+                  deliveryLocation: deliveryLocation || undefined,
                   items: items.map((i) => ({ productId: i.productId, weight: i.weight, quantity: i.quantity })),
                   advancePercentage,
                 },
@@ -469,6 +483,45 @@ export default function PaymentScreen() {
               onFocus={scrollToBottom}
             />
 
+            <View style={styles.mapPickerCard}>
+              <View style={styles.mapPickerHeader}>
+                <View style={styles.mapPickerTitleRow}>
+                  <Ionicons name="location" size={22} color="#C62828" />
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    <Text style={styles.mapPickerTitle}>Google Maps Delivery Pin</Text>
+                    <Text style={styles.mapPickerSubtitle}>Pinpoint your exact doorstep for delivery</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.mapPickerBtn}
+                  onPress={() => setShowMapPicker(true)}
+                  accessibilityLabel="Choose pin on map"
+                >
+                  <Text style={styles.mapPickerBtnText}>
+                    {deliveryLocation ? "Change Pin" : "Choose on Map"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {deliveryLocation ? (
+                <View style={styles.mapSelectedBox}>
+                  <View style={styles.mapSelectedBadge}>
+                    <Ionicons name="checkmark-circle" size={13} color="#2E7D32" style={{ marginRight: 4 }} />
+                    <Text style={styles.mapSelectedBadgeText}>
+                      Pin Verified in {deliveryLocation.deliveryArea}
+                    </Text>
+                  </View>
+                  <Text style={styles.mapSelectedAddress} numberOfLines={2}>
+                    {deliveryLocation.formattedAddress}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.mapPickerHint}>
+                  Tap "Choose on Map" to place marker on your exact house or apartment.
+                </Text>
+              )}
+            </View>
+
             <Text style={styles.label}>Delivery Address</Text>
             <Text style={styles.serviceAreaNote}>
               Delivering only to Tadepalli, Kunchanapalli, Undavalli, and Nulakapeta
@@ -526,6 +579,14 @@ export default function PaymentScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <DeliveryLocationPickerModal
+        visible={showMapPicker}
+        onClose={() => setShowMapPicker(false)}
+        onConfirm={handleLocationConfirm}
+        initialLocation={deliveryLocation}
+        getIdToken={getIdToken}
+      />
     </View>
   );
 }
@@ -903,5 +964,78 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#C62828",
     flexShrink: 1,
+  },
+  mapPickerCard: {
+    backgroundColor: "#FFF8F3",
+    borderWidth: 1.5,
+    borderColor: "#FFE0B2",
+    borderRadius: radius.md,
+    padding: 12,
+    marginBottom: spacing.md,
+  },
+  mapPickerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  mapPickerTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 8,
+  },
+  mapPickerTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  mapPickerSubtitle: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  mapPickerBtn: {
+    backgroundColor: colors.primary || "#C62828",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+  },
+  mapPickerBtnText: {
+    color: "#ffffff",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  mapSelectedBox: {
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#FFCC80",
+    borderStyle: "dashed",
+  },
+  mapSelectedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E8F5E9",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    alignSelf: "flex-start",
+    marginBottom: 4,
+  },
+  mapSelectedBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#2E7D32",
+  },
+  mapSelectedAddress: {
+    fontSize: 12,
+    color: colors.text,
+    lineHeight: 16,
+  },
+  mapPickerHint: {
+    marginTop: 6,
+    fontSize: 11,
+    color: colors.textMuted,
+    fontStyle: "italic",
   },
 });

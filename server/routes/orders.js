@@ -32,6 +32,7 @@ import {
   isDeliveryAreaServiceableAsync,
   getServiceableAreaErrorMessageAsync,
 } from "../utils/serviceAreas.js";
+import { validateAndVerifyLocation } from "../utils/geocoding.js";
 import { canCancelOrder, SUNDAY_CANCELLATION_ERROR_MESSAGE } from "../utils/cancellationPolicy.js";
 
 const router = express.Router();
@@ -308,6 +309,7 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
       advancePercentage,
       transactionId,
       transactionReference,
+      deliveryLocation,
     } = req.body;
 
     if (!customerName || !phone || !address || !transactionId) {
@@ -316,6 +318,16 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
     if (!(await isDeliveryAreaServiceableAsync(address))) {
       return res.status(400).json({ error: await getServiceableAreaErrorMessageAsync() });
     }
+
+    let verifiedLocation = null;
+    if (deliveryLocation) {
+      const locValidation = await validateAndVerifyLocation(deliveryLocation);
+      if (!locValidation.valid || !locValidation.serviceable) {
+        return res.status(400).json({ error: locValidation.error || "Delivery location outside serviceable delivery areas" });
+      }
+      verifiedLocation = locValidation.deliveryLocation;
+    }
+
     if (!isValidAdvancePercentage(advancePercentage)) {
       return res.status(400).json({ error: "advancePercentage must be one of 25, 50, 75, 100" });
     }
@@ -328,6 +340,7 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
       customer_name: customerName,
       phone,
       address,
+      delivery_location: verifiedLocation,
       items: resolvedItems.map((i) => ({
         product_id: i.productId,
         name: i.name,
@@ -350,7 +363,12 @@ router.post("/", requireCustomerAuth, async (req, res, next) => {
     // upsert customer record
     await Customer.findOneAndUpdate(
       { phone },
-      { name: customerName, phone, address },
+      {
+        name: customerName,
+        phone,
+        address,
+        ...(verifiedLocation ? { delivery_location: verifiedLocation } : {}),
+      },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     const clientOrder = toClient(order);

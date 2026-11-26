@@ -22,6 +22,14 @@ const orderSchema = new mongoose.Schema(
     customer_name: { type: String, required: true },
     phone: { type: String, required: true },
     address: { type: String, required: true },
+    delivery_location: {
+      latitude: { type: Number, default: null },
+      longitude: { type: Number, default: null },
+      formatted_address: { type: String, default: null, alias: "formattedAddress" },
+      delivery_area: { type: String, default: null, alias: "deliveryArea" },
+      place_id: { type: String, default: null, alias: "placeId" },
+      verified: { type: Boolean, default: false },
+    },
     items: { type: [orderItemSchema], required: true },
     subtotal: { type: Number, required: true },
     delivery_charge: { type: Number, required: true },
@@ -42,7 +50,7 @@ const orderSchema = new mongoose.Schema(
     razorpay_order_id: { type: String, default: null, index: true },
     razorpay_payment_id: {
       type: String,
-      default: null,
+      default: undefined,
     },
     razorpay_signature: { type: String, default: null },
     admin_sms_notification: {

@@ -58,6 +58,18 @@ export const api = {
   getProduct: (id) => request(`/products/${id}`),
   getSettings: () => request(`/settings`),
   getDeliveryAreas: () => request(`/delivery-areas`),
+  validateDeliveryLocation: (location, token) =>
+    request(`/delivery-areas/validate-location`, {
+      method: "POST",
+      body: JSON.stringify(location),
+      headers: authHeaders(token),
+    }),
+  geocodeLocation: (coords, token) =>
+    request(`/delivery-areas/geocode`, {
+      method: "POST",
+      body: JSON.stringify(coords),
+      headers: authHeaders(token),
+    }),
   placeOrder: (order, token) =>
     request(`/orders`, {
       method: "POST",

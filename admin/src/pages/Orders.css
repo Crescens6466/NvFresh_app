@@ -123,3 +123,35 @@
   color: var(--text-muted);
   max-width: 180px;
 }
+
+.orders-address-cell {
+  max-width: 240px;
+  min-width: 180px;
+}
+
+.orders-address-text {
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.orders-map-link {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #C62828;
+  text-decoration: none;
+  background: #FFF5F5;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid #FFCDD2;
+  transition: all 0.15s ease;
+}
+
+.orders-map-link:hover {
+  background: #FFEBEE;
+  text-decoration: underline;
+}

@@ -499,3 +499,93 @@
   color: #C62828;
   border: 1px solid #F5C6CB;
 }
+
+/* Map Location Picker Card */
+.payment-map-picker-card {
+  background: #FFF8F3;
+  border: 1.5px solid #FFE0B2;
+  border-radius: var(--radius-md, 12px);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.payment-map-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.payment-map-picker-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.payment-map-picker-icon {
+  font-size: 1.6rem;
+  color: var(--primary, #C62828);
+  flex-shrink: 0;
+}
+
+.payment-map-picker-title strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text, #1A1A1A);
+}
+
+.payment-map-picker-title p {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  color: var(--text-muted, #777);
+}
+
+.payment-map-open-btn {
+  background: var(--primary, #C62828);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-pill, 20px);
+  padding: 8px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+
+.payment-map-open-btn:hover {
+  opacity: 0.9;
+}
+
+.payment-map-selected-box {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #FFCC80;
+}
+
+.payment-map-selected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #2E7D32;
+  background: #E8F5E9;
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin-bottom: 4px;
+}
+
+.payment-map-selected-address {
+  font-size: 0.84rem;
+  color: var(--text, #222);
+  line-height: 1.35;
+  font-weight: 500;
+}
+
+.payment-map-hint {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted, #777);
+  font-style: italic;
+}

@@ -7,6 +7,8 @@ import {
   normalizeAreaName,
   ensureDefaultDeliveryAreas,
 } from "../utils/serviceAreas.js";
+import { validateAndVerifyLocation } from "../utils/geocoding.js";
+import { throttleLocationRequests } from "../middleware/locationRateLimit.js";
 
 const router = express.Router();
 
@@ -134,6 +136,49 @@ router.delete("/:id", requireAuth, async (req, res, next) => {
     if (err.name === "CastError") {
       return res.status(404).json({ error: "Delivery area not found" });
     }
+    next(err);
+  }
+});
+
+// POST /api/delivery-areas/validate-location — validate coordinates & delivery area (throttled)
+router.post("/validate-location", throttleLocationRequests, async (req, res, next) => {
+  try {
+    const location = req.body;
+    const result = await validateAndVerifyLocation(location);
+    if (!result.valid) {
+      return res.status(400).json({ error: result.error, serviceable: false, valid: false });
+    }
+    res.json({
+      serviceable: result.serviceable,
+      error: result.error,
+      deliveryLocation: result.deliveryLocation,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/delivery-areas/geocode — reverse-geocode coordinates and check serviceability (throttled)
+router.post("/geocode", throttleLocationRequests, async (req, res, next) => {
+  try {
+    const { latitude, longitude } = req.body;
+    if (latitude === undefined || longitude === undefined) {
+      return res.status(400).json({
+        error: "Latitude and longitude are required",
+        valid: false,
+        serviceable: false,
+      });
+    }
+    const result = await validateAndVerifyLocation({ latitude, longitude });
+    if (!result.valid) {
+      return res.status(400).json({
+        error: result.error,
+        valid: false,
+        serviceable: false,
+      });
+    }
+    res.json(result);
+  } catch (err) {
     next(err);
   }
 });

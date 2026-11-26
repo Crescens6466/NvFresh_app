@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { HiOutlineClipboardDocumentList } from "react-icons/hi2";
+import { HiOutlineClipboardDocumentList, HiOutlineMapPin } from "react-icons/hi2";
 import { api } from "../api.js";
 import { useToast } from "../context/ToastContext.jsx";
 import "./Orders.css";
@@ -111,7 +111,7 @@ export default function Orders() {
               <tr>
                 <th>Order</th>
                 <th>Customer</th>
-                <th>Phone</th>
+                <th>Delivery Address</th>
                 <th>Products</th>
                 <th>Amount</th>
                 <th>Advance</th>
@@ -125,8 +125,37 @@ export default function Orders() {
               {filtered.map((o) => (
                 <tr key={o.id}>
                   <td>#{o.id}</td>
-                  <td>{o.customer_name}</td>
-                  <td>{o.phone}</td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{o.customer_name}</div>
+                    <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>{o.phone}</div>
+                  </td>
+                  <td className="orders-address-cell">
+                    <div className="orders-address-text">{o.address}</div>
+                    {(() => {
+                      const loc = o.deliveryLocation || o.delivery_location;
+                      const hasValidCoords =
+                        typeof loc?.latitude === "number" &&
+                        typeof loc?.longitude === "number" &&
+                        !isNaN(loc.latitude) &&
+                        !isNaN(loc.longitude) &&
+                        (loc.latitude !== 0 || loc.longitude !== 0);
+                      if (hasValidCoords) {
+                        return (
+                          <a
+                            href={`https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="orders-map-link"
+                            title="Open exact coordinates in Google Maps"
+                          >
+                            <HiOutlineMapPin style={{ marginRight: 4, verticalAlign: "middle" }} />
+                            <span>View on Map{loc.deliveryArea ? ` (${loc.deliveryArea})` : ""}</span>
+                          </a>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </td>
                   <td className="orders-products-cell">
                     <ul className="orders-product-list">
                       {o.items.map((i, idx) => (

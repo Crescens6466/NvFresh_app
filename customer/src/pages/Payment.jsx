@@ -6,7 +6,10 @@ import {
   HiOutlineQrCode,
   HiOutlineShieldCheck,
   HiOutlineTruck,
+  HiOutlineMapPin,
+  HiOutlineCheckCircle,
 } from "react-icons/hi2";
+import DeliveryLocationPickerModal from "../components/DeliveryLocationPickerModal.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useCustomerAuth } from "../context/CustomerAuthContext.jsx";
@@ -65,8 +68,18 @@ export default function Payment() {
     address: "",
     transactionId: "",
   });
+  const [deliveryLocation, setDeliveryLocation] = useState(null);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deliveryAreas, setDeliveryAreas] = useState([]);
+
+  function handleLocationConfirm(loc) {
+    setDeliveryLocation(loc);
+    if (!form.address || form.address.trim() === "" || !isDeliveryAreaServiceable(form.address, activeAreaNames)) {
+      setForm((prev) => ({ ...prev, address: loc.formattedAddress }));
+    }
+    showToast(`Delivery pin confirmed in ${loc.deliveryArea}!`, "success");
+  }
 
   useEffect(() => {
     api
@@ -174,6 +187,7 @@ export default function Payment() {
         customerName: form.name.trim(),
         phone: form.phone.trim(),
         address: form.address.trim(),
+        deliveryLocation: deliveryLocation || undefined,
         amount: Math.round(quote.advanceAmount * 100),
       };
 
@@ -229,6 +243,7 @@ export default function Payment() {
                   customerName: form.name.trim(),
                   phone: form.phone.trim(),
                   address: form.address.trim(),
+                  deliveryLocation: deliveryLocation || undefined,
                   items: items.map((i) => ({ productId: i.productId, weight: i.weight, quantity: i.quantity })),
                   advancePercentage,
                 },
@@ -285,6 +300,7 @@ export default function Payment() {
           customerName: form.name,
           phone: form.phone,
           address: form.address,
+          deliveryLocation: deliveryLocation || undefined,
           items: items.map((i) => ({ productId: i.productId, weight: i.weight, quantity: i.quantity })),
           advancePercentage,
           transactionId: form.transactionId,
@@ -520,6 +536,40 @@ export default function Payment() {
             required
           />
         </label>
+        <div className="payment-map-picker-card">
+          <div className="payment-map-picker-header">
+            <div className="payment-map-picker-title">
+              <HiOutlineMapPin className="payment-map-picker-icon" />
+              <div>
+                <strong>Google Maps Delivery Pin</strong>
+                <p>Pinpoint your exact doorstep for fresh Sunday delivery</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="payment-map-open-btn"
+              onClick={() => setShowMapPicker(true)}
+            >
+              {deliveryLocation ? "Change Pin" : "Choose on Map"}
+            </button>
+          </div>
+
+          {deliveryLocation ? (
+            <div className="payment-map-selected-box">
+              <div className="payment-map-selected-badge">
+                <HiOutlineCheckCircle /> Pin Verified in {deliveryLocation.deliveryArea}
+              </div>
+              <div className="payment-map-selected-address">
+                {deliveryLocation.formattedAddress}
+              </div>
+            </div>
+          ) : (
+            <div className="payment-map-hint">
+              Tap "Choose on Map" to place marker on your exact house/building.
+            </div>
+          )}
+        </div>
+
         <label>
           Delivery Address
           <span className="payment-address-service-note">
@@ -572,6 +622,15 @@ export default function Payment() {
             : "Place Order (Manual UPI)"}
         </button>
       </form>
+
+      <DeliveryLocationPickerModal
+        isOpen={showMapPicker}
+        onClose={() => setShowMapPicker(false)}
+        onConfirm={handleLocationConfirm}
+        initialLocation={deliveryLocation}
+        activeAreas={deliveryAreas}
+        getIdToken={getIdToken}
+      />
     </div>
   );
 }

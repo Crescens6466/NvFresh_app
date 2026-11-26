@@ -9,7 +9,10 @@ import Customer from "../models/Customer.js";
 import Settings from "../models/Settings.js";
 import Admin from "../models/Admin.js";
 import Notification from "../models/Notification.js";
-import { requireCustomerAuth } from "../middleware/customerAuth.js";
+import {
+  requireCustomerAuth,
+  optionalCustomerAuth,
+} from "../middleware/customerAuth.js";
 import { verifyFirebaseIdToken } from "../firebaseTokenVerify.js";
 import { CUSTOMER_JWT_SECRET } from "./customerAuth.js";
 import { toClient } from "../utils/serialize.js";
@@ -37,6 +40,7 @@ import {
   isDeliveryAreaServiceableAsync,
   getServiceableAreaErrorMessageAsync,
 } from "../utils/serviceAreas.js";
+import { validateAndVerifyLocation } from "../utils/geocoding.js";
 
 const router = express.Router();
 
@@ -147,29 +151,7 @@ export async function withPaymentLock(paymentId, fn) {
   }
 }
 
-export async function optionalCustomerAuth(req, res, next) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith("Bearer ")) {
-    req.customer = null;
-    return next();
-  }
-  const token = header.split(" ")[1];
-  try {
-    const decoded = jwt.verify(token, CUSTOMER_JWT_SECRET);
-    req.customer = { uid: decoded.uid, phone: decoded.phone, email: null, name: null };
-    return next();
-  } catch {
-    // try firebase
-  }
-
-  try {
-    req.customer = await verifyFirebaseIdToken(token);
-    return next();
-  } catch {
-    req.customer = null;
-    return next();
-  }
-}
+export { optionalCustomerAuth };
 
 export function verifySignature(orderId, paymentId, signature, secret) {
   if (!orderId || !paymentId || !signature || !secret) return false;
@@ -243,6 +225,7 @@ router.post("/create-order", optionalCustomerAuth, async (req, res, next) => {
       customerName,
       phone,
       address,
+      deliveryLocation,
       amount: clientAmount,
       currency: clientCurrency,
       receipt: clientReceipt,
@@ -259,6 +242,13 @@ router.post("/create-order", optionalCustomerAuth, async (req, res, next) => {
 
       if (address && !(await isDeliveryAreaServiceableAsync(address))) {
         return res.status(400).json({ error: await getServiceableAreaErrorMessageAsync() });
+      }
+
+      if (deliveryLocation) {
+        const locValidation = await validateAndVerifyLocation(deliveryLocation);
+        if (!locValidation.valid || !locValidation.serviceable) {
+          return res.status(400).json({ error: locValidation.error || "Delivery location outside serviceable delivery areas" });
+        }
       }
 
       const { resolvedItems, total } = await computeOrderTotals(items);
@@ -325,6 +315,9 @@ router.post("/create-order", optionalCustomerAuth, async (req, res, next) => {
         phone: (phone || req.customer?.phone || "").slice(0, 20),
         address: (address || "").slice(0, 250),
         orderId: orderId || "",
+        deliveryLat: deliveryLocation?.latitude != null ? String(deliveryLocation.latitude) : "",
+        deliveryLng: deliveryLocation?.longitude != null ? String(deliveryLocation.longitude) : "",
+        deliveryArea: (deliveryLocation?.deliveryArea || "").slice(0, 100),
       },
     });
 
@@ -514,10 +507,18 @@ router.post("/verify-payment", optionalCustomerAuth, async (req, res, next) => {
         notifyAndRecord(existing._id, sendPaymentConfirmedNotification(clientOrder));
         safeWaitUntil(sendAdminOrderNotificationsOnce(existing._id, clientOrder, true));
       } else {
-        const { customerName, phone, address, items, advancePercentage } = orderData;
+        const { customerName, phone, address, items, advancePercentage, deliveryLocation } = orderData;
         const { resolvedItems, subtotal, deliveryCharge, total } = await computeOrderTotals(items);
         const { advanceAmount, remainingAmount } = computeAdvance(total, Number(advancePercentage));
         const customerUid = req.customer?.uid || `guest_${phone.trim().replace(/\D/g, "") || Date.now()}`;
+
+        let verifiedLocation = null;
+        if (deliveryLocation) {
+          const locValidation = await validateAndVerifyLocation(deliveryLocation);
+          if (locValidation.valid && locValidation.serviceable) {
+            verifiedLocation = locValidation.deliveryLocation;
+          }
+        }
 
         let order;
         try {
@@ -526,6 +527,7 @@ router.post("/verify-payment", optionalCustomerAuth, async (req, res, next) => {
             customer_name: customerName.trim(),
             phone: phone.trim(),
             address: address.trim(),
+            delivery_location: verifiedLocation,
             items: resolvedItems.map((i) => ({
               product_id: i.productId,
               name: i.name,
@@ -576,6 +578,19 @@ router.post("/verify-payment", optionalCustomerAuth, async (req, res, next) => {
         );
 
         clientOrder = toClient(order);
+
+        if (phone) {
+          Customer.findOneAndUpdate(
+            { phone: phone.trim() },
+            {
+              name: customerName.trim(),
+              phone: phone.trim(),
+              address: address.trim(),
+              ...(verifiedLocation ? { delivery_location: verifiedLocation } : {}),
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          ).catch((e) => console.warn("[payment] Customer profile update notice:", e.message));
+        }
 
         // Customer Notifications
         if (customerUid) {
@@ -749,6 +764,16 @@ router.post("/webhook", async (req, res) => {
               customer_name: (rzpOrder.notes.customerName || "Customer").trim(),
               phone: (rzpOrder.notes.phone || "").trim(),
               address: (rzpOrder.notes.address || "").trim(),
+              delivery_location:
+                rzpOrder.notes?.deliveryLat && rzpOrder.notes?.deliveryLng
+                  ? {
+                      latitude: Number(rzpOrder.notes.deliveryLat),
+                      longitude: Number(rzpOrder.notes.deliveryLng),
+                      formatted_address: (rzpOrder.notes.address || "").trim(),
+                      delivery_area: rzpOrder.notes.deliveryArea || null,
+                      verified: true,
+                    }
+                  : null,
               items: resolvedItems.map((i) => ({
                 product_id: i.productId,
                 name: i.name,
