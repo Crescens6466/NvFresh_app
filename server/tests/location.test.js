@@ -18,6 +18,7 @@ import {
   validateAndVerifyLocation,
   parseCoordinate,
   isCoordinateInIndia,
+  clearGeocodeCache,
 } from "../utils/geocoding.js";
 import { toClient } from "../utils/serialize.js";
 import { CUSTOMER_JWT_SECRET } from "../routes/customerAuth.js";
@@ -139,7 +140,7 @@ test("Delivery Location & Geocoding Architecture Suite", async (t) => {
     assert.equal(body.serviceable, false);
   });
 
-  await t.test("6. Order placement stores normalized delivery_location and coordinates", async () => {
+  await t.test("6. Order placement stores normalized delivery_location and coordinates (and survives Telegram failure)", async () => {
     const orderPayload = {
       customerName: "Location Test Customer",
       phone: "+919999988888",
@@ -156,14 +157,31 @@ test("Delivery Location & Geocoding Architecture Suite", async (t) => {
       },
     };
 
-    const res = await fetch(`${baseUrl}/orders`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${customerToken}`,
-      },
-      body: JSON.stringify(orderPayload),
-    });
+    const originalFetch = globalThis.fetch;
+    let telegramCalls = 0;
+    globalThis.fetch = async (url, init) => {
+      if (typeof url === "string" && url.includes("api.telegram.org")) {
+        telegramCalls++;
+        throw new Error("Simulated Telegram outage");
+      }
+      return originalFetch(url, init);
+    };
+
+    let res;
+    try {
+      res = await fetch(`${baseUrl}/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${customerToken}`,
+        },
+        body: JSON.stringify(orderPayload),
+      });
+      // Give fire-and-forget Telegram task a tick to settle before restoring fetch
+      await new Promise((r) => setTimeout(r, 150));
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
 
     assert.equal(res.status, 201);
     const clientOrder = await res.json();
@@ -173,6 +191,7 @@ test("Delivery Location & Geocoding Architecture Suite", async (t) => {
     assert.equal(clientOrder.deliveryLocation.longitude, 80.6015);
     assert.equal(clientOrder.deliveryLocation.deliveryArea, "Tadepalli");
     assert.equal(clientOrder.deliveryLocation.verified, true);
+    assert.ok(telegramCalls <= 1);
 
     // Verify DB document
     const dbOrder = await Order.findById(clientOrder.id);
@@ -239,6 +258,9 @@ test("Delivery Location & Geocoding Architecture Suite", async (t) => {
   await t.test("9. Production guard: In production without Google API key, validation fails safely and never uses bounding-box fallback", async () => {
     const originalEnv = process.env.NODE_ENV;
     const originalKey = process.env.GOOGLE_GEOCODING_API_KEY;
+    const originalBackendKey = process.env.GOOGLE_MAPS_BACKEND_API_KEY;
+    const originalMapsKey = process.env.GOOGLE_MAPS_API_KEY;
+    clearGeocodeCache();
     try {
       process.env.NODE_ENV = "production";
       delete process.env.GOOGLE_GEOCODING_API_KEY;
@@ -257,12 +279,16 @@ test("Delivery Location & Geocoding Architecture Suite", async (t) => {
       assert.equal(result.deliveryLocation.deliveryArea, null, "Must not trust client deliveryArea");
       assert.ok(result.error.includes("unavailable"), "Should report service unavailable");
     } finally {
+      clearGeocodeCache();
       process.env.NODE_ENV = originalEnv;
-      if (originalKey) process.env.GOOGLE_GEOCODING_API_KEY = originalKey;
+      if (originalKey !== undefined) process.env.GOOGLE_GEOCODING_API_KEY = originalKey;
+      if (originalBackendKey !== undefined) process.env.GOOGLE_MAPS_BACKEND_API_KEY = originalBackendKey;
+      if (originalMapsKey !== undefined) process.env.GOOGLE_MAPS_API_KEY = originalMapsKey;
     }
   });
 
   await t.test("10. Geocoding cache caches reverse-geocode queries safely", async () => {
+    clearGeocodeCache();
     // Tests that repeated identical coordinates do not crash or throw
     const res1 = await fetch(`${baseUrl}/delivery-areas/validate-location`, {
       method: "POST",

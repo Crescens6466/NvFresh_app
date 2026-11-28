@@ -10,6 +10,7 @@ process.env.NODE_ENV = "test";
 import app from "../app.js";
 import { connectDB } from "../db.js";
 import Product from "../models/Product.js";
+import { getStorageProvider } from "../storage/index.js";
 
 test("Image Delivery & Optimization Suite", async (t) => {
   let server;
@@ -90,12 +91,41 @@ test("Image Delivery & Optimization Suite", async (t) => {
     assert.equal(text, "", "304 response body must be empty");
   });
 
-  await t.test("7. In-memory cache serves repeated requests with low latency", async () => {
-    const t0 = performance.now();
-    const res = await fetch(`${baseUrl}/files/${sampleImageId}?size=thumb`);
-    const t1 = performance.now();
-    assert.equal(res.status, 200);
-    assert.ok((t1 - t0) < 50, `Cached response should be fast (< 50ms), took ${(t1 - t0).toFixed(1)}ms`);
+  await t.test("7. In-memory cache serves repeated requests without invoking GridFS or Sharp again", async () => {
+    const storage = getStorageProvider();
+    const originalGetStream = storage.getStream;
+    let getStreamCalls = 0;
+    storage.getStream = async (...args) => {
+      getStreamCalls++;
+      return originalGetStream.apply(storage, args);
+    };
+
+    try {
+      // Cold request for a fresh width variant populates the in-memory transform cache
+      const firstRes = await fetch(`${baseUrl}/files/${sampleImageId}?w=350`);
+      assert.equal(firstRes.status, 200);
+      assert.equal(firstRes.headers.get("content-type"), "image/webp");
+      const firstBuf = Buffer.from(await firstRes.arrayBuffer());
+      const firstEtag = firstRes.headers.get("etag");
+      assert.equal(getStreamCalls, 1, "First uncached variant request should invoke storage.getStream once");
+
+      // Repeated requests for the same variant must hit transformCache without calling storage/Sharp again
+      const secondRes = await fetch(`${baseUrl}/files/${sampleImageId}?w=350`);
+      assert.equal(secondRes.status, 200);
+      assert.equal(secondRes.headers.get("content-type"), "image/webp");
+      assert.equal(secondRes.headers.get("etag"), firstEtag);
+      const secondBuf = Buffer.from(await secondRes.arrayBuffer());
+      assert.equal(Buffer.compare(firstBuf, secondBuf), 0, "Cached response bytes must match original output");
+      assert.equal(getStreamCalls, 1, "Cached variant request must not invoke GridFS/Sharp again");
+
+      // Previously warmed ?size=thumb variant from earlier tests must also be served from cache
+      const warmThumbRes = await fetch(`${baseUrl}/files/${sampleImageId}?size=thumb`);
+      assert.equal(warmThumbRes.status, 200);
+      assert.equal(warmThumbRes.headers.get("content-type"), "image/webp");
+      assert.equal(getStreamCalls, 1, "Already-cached thumb variant must not invoke GridFS/Sharp");
+    } finally {
+      storage.getStream = originalGetStream;
+    }
   });
 
   await t.test("8. Original GridFS file in MongoDB is preserved unchanged", async () => {

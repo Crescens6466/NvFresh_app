@@ -1,6 +1,76 @@
+import { parseCoordinate, areCoordinatesValid } from "./geocoding.js";
+
 const TELEGRAM_API_BASE = "https://api.telegram.org/bot";
 const REQUEST_TIMEOUT_MS = 10000;
 const MAX_TELEGRAM_MESSAGE_LENGTH = 4000;
+export const TELEGRAM_MAPS_BUTTON_TEXT = "📍 Open Delivery Location in Google Maps";
+export const TELEGRAM_MAPS_SEARCH_BUTTON_TEXT = "🔍 Search Address in Google Maps (Approximate)";
+
+/**
+ * Extracts normalized delivery coordinates and formatted address from order params.
+ */
+export function extractOrderDeliveryLocation(params) {
+  const candidates = [params?.deliveryLocation, params?.delivery_location].filter(
+    (loc) => loc && typeof loc === "object" && !Array.isArray(loc)
+  );
+
+  for (const loc of candidates) {
+    const lat = parseCoordinate(loc.latitude ?? loc.lat);
+    const lng = parseCoordinate(loc.longitude ?? loc.lng);
+    if (areCoordinatesValid(lat, lng)) {
+      const formattedAddress =
+        typeof loc.formattedAddress === "string"
+          ? loc.formattedAddress.trim()
+          : typeof loc.formatted_address === "string"
+          ? loc.formatted_address.trim()
+          : "";
+      return {
+        hasValidCoordinates: true,
+        latitude: lat,
+        longitude: lng,
+        formattedAddress,
+      };
+    }
+  }
+
+  const firstLoc = candidates[0] || null;
+  const formattedAddress =
+    typeof firstLoc?.formattedAddress === "string"
+      ? firstLoc.formattedAddress.trim()
+      : typeof firstLoc?.formatted_address === "string"
+      ? firstLoc.formatted_address.trim()
+      : "";
+
+  return {
+    hasValidCoordinates: false,
+    latitude: null,
+    longitude: null,
+    formattedAddress,
+  };
+}
+
+/**
+ * Builds a Google Maps driving directions URL from validated coordinates (no API key).
+ */
+export function buildGoogleMapsDirectionsUrl(latitude, longitude) {
+  const lat = parseCoordinate(latitude);
+  const lng = parseCoordinate(longitude);
+  if (!areCoordinatesValid(lat, lng)) {
+    return null;
+  }
+  const destination = encodeURIComponent(`${lat},${lng}`);
+  return `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+}
+
+/**
+ * Builds an approximate Google Maps address search URL for legacy orders without coordinates.
+ */
+export function buildGoogleMapsAddressSearchUrl(address) {
+  if (typeof address !== "string") return null;
+  const trimmed = address.trim();
+  if (!trimmed || trimmed === "No address provided") return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trimmed.slice(0, 500))}`;
+}
 
 export function escapeHtml(str) {
   if (str === null || str === undefined) return "";
@@ -69,7 +139,11 @@ export function buildAdminOrderTelegramPayload(params) {
 
   const customerName = params.customerName || params.customer_name || "Customer";
   const phone = params.phone || "N/A";
-  const address = params.address || "No address provided";
+  const deliveryLoc = extractOrderDeliveryLocation(params);
+  const address =
+    typeof params.address === "string" && params.address.trim()
+      ? params.address.trim()
+      : deliveryLoc.formattedAddress || "No address provided";
 
   const rawItems = params.items || [];
   const formattedItems = Array.isArray(rawItems) && rawItems.length > 0
@@ -112,6 +186,50 @@ export function buildAdminOrderTelegramPayload(params) {
     ""
   ).trim().replace(/^📦\s*/, "");
 
+  const addressLines = [
+    "📍 DELIVERY ADDRESS:",
+    escapeHtml(address),
+  ];
+
+  if (
+    deliveryLoc.formattedAddress &&
+    deliveryLoc.formattedAddress.toLowerCase() !== address.toLowerCase()
+  ) {
+    addressLines.push(`Pinned Address: ${escapeHtml(deliveryLoc.formattedAddress)}`);
+  }
+
+  let replyMarkup = null;
+  if (deliveryLoc.hasValidCoordinates) {
+    const directionsUrl = buildGoogleMapsDirectionsUrl(deliveryLoc.latitude, deliveryLoc.longitude);
+    if (directionsUrl) {
+      replyMarkup = {
+        inline_keyboard: [
+          [
+            {
+              text: TELEGRAM_MAPS_BUTTON_TEXT,
+              url: directionsUrl,
+            },
+          ],
+        ],
+      };
+    }
+  } else {
+    const searchUrl = buildGoogleMapsAddressSearchUrl(address);
+    if (searchUrl) {
+      addressLines.push("<i>(Approximate address only — no GPS pin saved)</i>");
+      replyMarkup = {
+        inline_keyboard: [
+          [
+            {
+              text: TELEGRAM_MAPS_SEARCH_BUTTON_TEXT,
+              url: searchUrl,
+            },
+          ],
+        ],
+      };
+    }
+  }
+
   const sections = [
     [
       "🔔 NEW NVFRESH ORDER",
@@ -126,10 +244,7 @@ export function buildAdminOrderTelegramPayload(params) {
       ...formattedItems,
     ].join("\n"),
 
-    [
-      "📍 DELIVERY ADDRESS:",
-      escapeHtml(address.trim()),
-    ].join("\n"),
+    addressLines.join("\n"),
 
     paymentLines.join("\n"),
   ];
@@ -140,11 +255,16 @@ export function buildAdminOrderTelegramPayload(params) {
 
   sections.push('<a href="https://admin.nvfresh.in">🔗 Open Admin Panel</a>');
 
-  return {
+  const payload = {
     chat_id: chatId,
     text: sections.join("\n\n"),
     parse_mode: "HTML",
   };
+  if (replyMarkup) {
+    payload.reply_markup = replyMarkup;
+  }
+
+  return payload;
 }
 
 export async function sendAdminOrderTelegram(params) {
@@ -172,17 +292,23 @@ export async function sendAdminOrderTelegram(params) {
 
   let lastResponseBody;
   try {
-    for (const chunk of chunks) {
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const isLastChunk = i === chunks.length - 1;
+      const requestBody = {
+        chat_id: payload.chat_id,
+        text: chunk,
+        parse_mode: payload.parse_mode,
+        ...(isLastChunk && payload.reply_markup ? { reply_markup: payload.reply_markup } : {}),
+      };
+
       let response;
       let responseBody;
       try {
         response = await fetch(`${TELEGRAM_API_BASE}${botToken}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...payload,
-            text: chunk,
-          }),
+          body: JSON.stringify(requestBody),
           signal: controller.signal,
         });
         responseBody = await response.json().catch(() => ({}));

@@ -7,9 +7,16 @@ import {
 } from "../routes/orders.js";
 import {
   buildAdminOrderTelegramPayload,
+  buildGoogleMapsDirectionsUrl,
+  buildGoogleMapsAddressSearchUrl,
+  extractOrderDeliveryLocation,
+  sendAdminOrderTelegram,
   escapeHtml,
   splitTelegramMessage,
+  TELEGRAM_MAPS_BUTTON_TEXT,
+  TELEGRAM_MAPS_SEARCH_BUTTON_TEXT,
 } from "../utils/telegram.js";
+import Order from "../models/Order.js";
 import {
   findOrderByPaymentId,
   withPaymentLock,
@@ -867,5 +874,346 @@ describe("Payment ID Canonicalization, Concurrency & Notification Deduplication"
 
     // Both instances end up referencing the exact same canonical order ID
     assert.equal(resInstance1.order._id, resInstance2.order._id);
+  });
+});
+
+describe("Telegram Google Maps Delivery Location & Inline Keyboard", () => {
+  const dummyChatId = "-100123456789";
+
+  it("1. Generates exact Google Maps directions URL for finite coordinates with no API key", () => {
+    const url = buildGoogleMapsDirectionsUrl(16.481234, 80.601567);
+    assert.equal(
+      url,
+      "https://www.google.com/maps/dir/?api=1&destination=16.481234%2C80.601567&travelmode=driving"
+    );
+    assert.ok(!url.includes("key="), "Must never include any API key");
+    assert.ok(!url.includes("AIza"), "Must never include any Google key");
+
+    // Negative coordinates and numeric strings are also supported
+    assert.equal(
+      buildGoogleMapsDirectionsUrl("-12.345", "67.89"),
+      "https://www.google.com/maps/dir/?api=1&destination=-12.345%2C67.89&travelmode=driving"
+    );
+  });
+
+  it("2. Attaches inline keyboard URL button in Telegram payload and HTTP request body", async () => {
+    const orderWithSavedLocation = {
+      id: "ord_maps_001",
+      customer_name: "Anitha Reddy",
+      phone: "9876543210",
+      address: "Plot 14, Canal Road, Tadepalli, AP 522501",
+      delivery_location: {
+        latitude: 16.4812,
+        longitude: 80.6015,
+        formatted_address: "Plot 14, Canal Road, Tadepalli, Andhra Pradesh 522501, India",
+      },
+      items: [{ name: "Chicken Curry Cut", weight: "1kg", quantity: 2 }],
+      total: 560,
+      advance_paid: 140,
+      remaining_amount: 420,
+    };
+
+    const payload = buildAdminOrderTelegramPayload({
+      chatId: dummyChatId,
+      ...orderWithSavedLocation,
+    });
+
+    assert.equal(payload.chat_id, dummyChatId);
+    assert.equal(payload.parse_mode, "HTML");
+    assert.ok(payload.text.includes("Order: #ord_maps_001"));
+    assert.ok(payload.text.includes("Customer: Anitha Reddy"));
+    assert.ok(payload.text.includes("Phone: 9876543210"));
+    assert.ok(payload.text.includes("Plot 14, Canal Road, Tadepalli, AP 522501"));
+    assert.ok(payload.text.includes("Pinned Address: Plot 14, Canal Road, Tadepalli, Andhra Pradesh 522501, India"));
+    assert.ok(payload.text.includes("• Chicken Curry Cut — 1kg × 2"));
+    assert.ok(payload.text.includes("Order Total: ₹560.00"));
+    assert.ok(payload.text.includes('<a href="https://admin.nvfresh.in">🔗 Open Admin Panel</a>'));
+
+    assert.ok(payload.reply_markup?.inline_keyboard);
+    const button = payload.reply_markup.inline_keyboard[0][0];
+    assert.equal(button.text, "📍 Open Delivery Location in Google Maps");
+    assert.equal(
+      button.url,
+      "https://www.google.com/maps/dir/?api=1&destination=16.4812%2C80.6015&travelmode=driving"
+    );
+
+    // Verify sendAdminOrderTelegram posts the reply_markup in fetch body without leaking token
+    const originalFetch = globalThis.fetch;
+    const originalToken = process.env.TELEGRAM_BOT_TOKEN;
+    const originalChatId = process.env.TELEGRAM_ORDER_CHAT_ID;
+    const sentRequests = [];
+    try {
+      process.env.TELEGRAM_BOT_TOKEN = "123456:DUMMY_BOT_TOKEN";
+      process.env.TELEGRAM_ORDER_CHAT_ID = dummyChatId;
+      globalThis.fetch = async (url, init) => {
+        sentRequests.push({ url, body: JSON.parse(init.body) });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true, result: { message_id: 901 } }),
+        };
+      };
+
+      await sendAdminOrderTelegram(orderWithSavedLocation);
+      assert.equal(sentRequests.length, 1);
+      assert.equal(sentRequests[0].url, "https://api.telegram.org/bot123456:DUMMY_BOT_TOKEN/sendMessage");
+      assert.equal(sentRequests[0].body.chat_id, dummyChatId);
+      assert.equal(sentRequests[0].body.reply_markup.inline_keyboard[0][0].text, TELEGRAM_MAPS_BUTTON_TEXT);
+      assert.equal(
+        sentRequests[0].body.reply_markup.inline_keyboard[0][0].url,
+        "https://www.google.com/maps/dir/?api=1&destination=16.4812%2C80.6015&travelmode=driving"
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalToken === undefined) delete process.env.TELEGRAM_BOT_TOKEN;
+      else process.env.TELEGRAM_BOT_TOKEN = originalToken;
+      if (originalChatId === undefined) delete process.env.TELEGRAM_ORDER_CHAT_ID;
+      else process.env.TELEGRAM_ORDER_CHAT_ID = originalChatId;
+    }
+  });
+
+  it("3. Uses exact persisted coordinates from deliveryLocation / delivery_location and ignores address text", async () => {
+    const exactLat = 16.49321;
+    const exactLng = 80.61482;
+
+    const extracted = extractOrderDeliveryLocation({
+      address: "Completely different landmark text, Vijayawada",
+      deliveryLocation: {
+        latitude: exactLat,
+        longitude: exactLng,
+        formattedAddress: "Exact Pinned Street, Undavalli, AP",
+      },
+    });
+    assert.equal(extracted.hasValidCoordinates, true);
+    assert.equal(extracted.latitude, exactLat);
+    assert.equal(extracted.longitude, exactLng);
+    assert.equal(extracted.formattedAddress, "Exact Pinned Street, Undavalli, AP");
+
+    // Verify sendAdminOrderTelegramOnce forwards persisted coordinates from claimedOrder even if order omits them
+    const originalFindOneAndUpdate = Order.findOneAndUpdate;
+    const originalUpdateOne = Order.updateOne;
+    const originalFetch = globalThis.fetch;
+    const originalToken = process.env.TELEGRAM_BOT_TOKEN;
+    const originalChatId = process.env.TELEGRAM_ORDER_CHAT_ID;
+    const capturedBodies = [];
+
+    try {
+      process.env.TELEGRAM_BOT_TOKEN = "123456:DUMMY_BOT_TOKEN";
+      process.env.TELEGRAM_ORDER_CHAT_ID = dummyChatId;
+
+      Order.findOneAndUpdate = async () => ({
+        _id: "6ae4497366cfa64bc6bf7fff",
+        customer_name: "Kiran Kumar",
+        phone: "9876500000",
+        address: "Near Temple, Undavalli",
+        delivery_location: {
+          latitude: exactLat,
+          longitude: exactLng,
+          formatted_address: "Exact Pinned Street, Undavalli, AP",
+        },
+        items: [{ name: "Fresh Fish", weight: "1kg", quantity: 1 }],
+        total: 420,
+        advance_paid: 105,
+        remaining_amount: 315,
+      });
+      Order.updateOne = async () => ({ modifiedCount: 1 });
+      globalThis.fetch = async (_url, init) => {
+        capturedBodies.push(JSON.parse(init.body));
+        return { ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: 902 } }) };
+      };
+
+      await sendAdminOrderTelegramOnce("6ae4497366cfa64bc6bf7fff", { id: "6ae4497366cfa64bc6bf7fff" });
+      assert.equal(capturedBodies.length, 1);
+      assert.equal(
+        capturedBodies[0].reply_markup.inline_keyboard[0][0].url,
+        `https://www.google.com/maps/dir/?api=1&destination=${exactLat}%2C${exactLng}&travelmode=driving`
+      );
+    } finally {
+      Order.findOneAndUpdate = originalFindOneAndUpdate;
+      Order.updateOne = originalUpdateOne;
+      globalThis.fetch = originalFetch;
+      if (originalToken === undefined) delete process.env.TELEGRAM_BOT_TOKEN;
+      else process.env.TELEGRAM_BOT_TOKEN = originalToken;
+      if (originalChatId === undefined) delete process.env.TELEGRAM_ORDER_CHAT_ID;
+      else process.env.TELEGRAM_ORDER_CHAT_ID = originalChatId;
+    }
+  });
+
+  it("4. Legacy order without coordinates preserves address and clearly distinguishes approximate address search", () => {
+    const legacyPayload = buildAdminOrderTelegramPayload({
+      chatId: dummyChatId,
+      orderId: "ord_legacy_001",
+      customerName: "Srinivas Rao",
+      phone: "9012345678",
+      address: "Door 7-21, Church Road, Tadepalli - 522501",
+      items: [{ name: "Mutton Curry Cut", weight: "500g", quantity: 1 }],
+      total: 450,
+      advancePaid: 150,
+    });
+
+    assert.ok(legacyPayload.text.includes("📍 DELIVERY ADDRESS:\nDoor 7-21, Church Road, Tadepalli - 522501"));
+    assert.ok(legacyPayload.text.includes("Approximate address only — no GPS pin saved"));
+    assert.ok(!legacyPayload.text.includes("maps/dir/"), "Must never generate a coordinate directions URL");
+
+    const button = legacyPayload.reply_markup?.inline_keyboard?.[0]?.[0];
+    assert.ok(button, "Legacy order with valid address provides clearly marked search fallback button");
+    assert.equal(button.text, TELEGRAM_MAPS_SEARCH_BUTTON_TEXT);
+    assert.notEqual(button.text, TELEGRAM_MAPS_BUTTON_TEXT);
+    assert.equal(
+      button.url,
+      buildGoogleMapsAddressSearchUrl("Door 7-21, Church Road, Tadepalli - 522501")
+    );
+    assert.ok(button.url.startsWith("https://www.google.com/maps/search/?api=1&query="));
+  });
+
+  it("5. Invalid or missing coordinates never produce a misleading exact-location directions link", () => {
+    const invalidCoordsList = [
+      null,
+      undefined,
+      {},
+      { latitude: null, longitude: null },
+      { latitude: 16.4812, longitude: null },
+      { latitude: null, longitude: 80.6015 },
+      { latitude: NaN, longitude: 80.6015 },
+      { latitude: Infinity, longitude: 80.6015 },
+      { latitude: "abc", longitude: "80.6015" },
+      { latitude: true, longitude: false },
+      { latitude: 95, longitude: 80.6015 },
+      { latitude: -91, longitude: 80.6015 },
+      { latitude: 16.4812, longitude: 181 },
+      { latitude: 16.4812, longitude: -181 },
+    ];
+
+    for (const invalidLoc of invalidCoordsList) {
+      assert.equal(
+        buildGoogleMapsDirectionsUrl(invalidLoc?.latitude, invalidLoc?.longitude),
+        null,
+        `Should reject invalid coords: ${JSON.stringify(invalidLoc)}`
+      );
+
+      const payload = buildAdminOrderTelegramPayload({
+        chatId: dummyChatId,
+        orderId: "ord_invalid_coords",
+        customerName: "Test User",
+        phone: "9999999999",
+        address: "Tadepalli Center",
+        delivery_location: invalidLoc,
+        items: [{ name: "Chicken", weight: "500g", quantity: 1 }],
+        total: 150,
+        advancePaid: 50,
+      });
+
+      const button = payload.reply_markup?.inline_keyboard?.[0]?.[0];
+      assert.notEqual(button?.text, TELEGRAM_MAPS_BUTTON_TEXT);
+      assert.ok(!button?.url?.includes("maps/dir/"), "Must not build directions link for invalid coordinates");
+    }
+
+    // Without address or coordinates, omit reply_markup completely
+    const barePayload = buildAdminOrderTelegramPayload({
+      chatId: dummyChatId,
+      orderId: "ord_no_addr",
+      customerName: "Test",
+      phone: "9999999999",
+      items: [{ name: "Chicken", weight: "500g", quantity: 1 }],
+      total: 150,
+      advancePaid: 50,
+    });
+    assert.equal(barePayload.reply_markup, undefined);
+  });
+
+  it("6. Telegram API failure in sendAdminOrderTelegramOnce is caught safely and does not throw", async () => {
+    const originalFindOneAndUpdate = Order.findOneAndUpdate;
+    const originalUpdateOne = Order.updateOne;
+    const originalFetch = globalThis.fetch;
+    const originalToken = process.env.TELEGRAM_BOT_TOKEN;
+    const originalChatId = process.env.TELEGRAM_ORDER_CHAT_ID;
+    const statusUpdates = [];
+
+    try {
+      process.env.TELEGRAM_BOT_TOKEN = "123456:DUMMY_BOT_TOKEN";
+      process.env.TELEGRAM_ORDER_CHAT_ID = dummyChatId;
+
+      Order.findOneAndUpdate = async () => ({
+        _id: "ord_tg_fail_1",
+        customer_name: "Failure Resilience Customer",
+        phone: "9876543210",
+        address: "Tadepalli",
+        delivery_location: { latitude: 16.4812, longitude: 80.6015 },
+        items: [{ name: "Chicken", weight: "1kg", quantity: 1 }],
+        total: 280,
+        advance_paid: 70,
+        remaining_amount: 210,
+      });
+      Order.updateOne = async (filter, update) => {
+        statusUpdates.push({ filter, update });
+        return { modifiedCount: 1 };
+      };
+      globalThis.fetch = async () => ({
+        ok: false,
+        status: 502,
+        json: async () => ({ ok: false, description: "Bad Gateway" }),
+      });
+
+      // Must resolve without throwing so order creation/payment verification never fails
+      await sendAdminOrderTelegramOnce("ord_tg_fail_1", { id: "ord_tg_fail_1" });
+
+      assert.equal(statusUpdates.length, 1);
+      assert.equal(statusUpdates[0].update.$set["admin_telegram_notification.status"], "failed");
+      assert.equal(statusUpdates[0].update.$set["admin_telegram_notification.error"], "Bad Gateway");
+    } finally {
+      Order.findOneAndUpdate = originalFindOneAndUpdate;
+      Order.updateOne = originalUpdateOne;
+      globalThis.fetch = originalFetch;
+      if (originalToken === undefined) delete process.env.TELEGRAM_BOT_TOKEN;
+      else process.env.TELEGRAM_BOT_TOKEN = originalToken;
+      if (originalChatId === undefined) delete process.env.TELEGRAM_ORDER_CHAT_ID;
+      else process.env.TELEGRAM_ORDER_CHAT_ID = originalChatId;
+    }
+  });
+
+  it("attaches inline keyboard only once on the final chunk for multi-chunk Telegram messages", async () => {
+    const items = Array.from({ length: 60 }, (_, idx) => ({
+      name: `Special Organic Chicken & Seafood Pack Item #${idx + 1}`,
+      weight: "1kg",
+      quantity: 1,
+    }));
+
+    const originalFetch = globalThis.fetch;
+    const originalToken = process.env.TELEGRAM_BOT_TOKEN;
+    const originalChatId = process.env.TELEGRAM_ORDER_CHAT_ID;
+    const sentBodies = [];
+
+    try {
+      process.env.TELEGRAM_BOT_TOKEN = "123456:DUMMY_BOT_TOKEN";
+      process.env.TELEGRAM_ORDER_CHAT_ID = dummyChatId;
+      globalThis.fetch = async (_url, init) => {
+        sentBodies.push(JSON.parse(init.body));
+        return { ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: 950 } }) };
+      };
+
+      await sendAdminOrderTelegram({
+        orderId: "ord_multichunk_maps",
+        customerName: "Multi Chunk",
+        phone: "9876543210",
+        address: "Tadepalli, AP",
+        deliveryLocation: { latitude: 16.4812, longitude: 80.6015 },
+        items,
+        total: 15000,
+        advancePaid: 3750,
+      });
+
+      assert.ok(sentBodies.length >= 2, "Expected message to split across multiple chunks");
+      for (let i = 0; i < sentBodies.length - 1; i++) {
+        assert.equal(sentBodies[i].reply_markup, undefined, "Intermediate chunks should not duplicate inline keyboard");
+      }
+      const lastBody = sentBodies[sentBodies.length - 1];
+      assert.equal(lastBody.reply_markup.inline_keyboard[0][0].text, TELEGRAM_MAPS_BUTTON_TEXT);
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalToken === undefined) delete process.env.TELEGRAM_BOT_TOKEN;
+      else process.env.TELEGRAM_BOT_TOKEN = originalToken;
+      if (originalChatId === undefined) delete process.env.TELEGRAM_ORDER_CHAT_ID;
+      else process.env.TELEGRAM_ORDER_CHAT_ID = originalChatId;
+    }
   });
 });

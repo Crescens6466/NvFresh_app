@@ -125,6 +125,8 @@ export async function sendAdminOrderTelegramOnce(orderId, order, allowRetry = tr
           customerName: order?.customer_name || claimedOrder.customer_name,
           phone: order?.phone || claimedOrder.phone,
           address: order?.address || claimedOrder.address,
+          deliveryLocation: order?.deliveryLocation || null,
+          delivery_location: order?.delivery_location || claimedOrder.delivery_location || null,
           items: order?.items || claimedOrder.items,
           total: order?.total ?? claimedOrder.total,
           amount: order?.total ?? claimedOrder.total,

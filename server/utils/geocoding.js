@@ -117,12 +117,11 @@ function setInGeocodeCache(lat, lng, data) {
   });
 }
 
-export async function reverseGeocodeWithGoogle(latitude, longitude, customApiKey = null) {
-  const cached = getFromGeocodeCache(latitude, longitude);
-  if (cached) {
-    return cached;
-  }
+export function clearGeocodeCache() {
+  GEOCODE_CACHE.clear();
+}
 
+export async function reverseGeocodeWithGoogle(latitude, longitude, customApiKey = null) {
   const apiKey =
     customApiKey ||
     process.env.GOOGLE_GEOCODING_API_KEY ||
@@ -131,6 +130,11 @@ export async function reverseGeocodeWithGoogle(latitude, longitude, customApiKey
 
   if (!apiKey) {
     return null;
+  }
+
+  const cached = getFromGeocodeCache(latitude, longitude);
+  if (cached) {
+    return cached;
   }
 
   const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${encodeURIComponent(apiKey)}`;
